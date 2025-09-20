@@ -52,5 +52,4 @@ Base.length(V::DeviceSparseVector) = V.n
 Base.size(V::DeviceSparseVector) = (V.n,)
 SparseArrays.nonzeros(V::DeviceSparseVector) = V.nzval
 SparseArrays.nonzeroinds(V::DeviceSparseVector) = V.nzind
-Base.copy(V::DeviceSparseVector{Tv,Ti,IndT,ValT}) where {Tv,Ti,IndT,ValT} =
-    DeviceSparseVector{Tv,Ti,IndT,ValT}(V.n, copy(V.nzind), copy(V.nzval))
+Base.copy(V::DeviceSparseVector) = DeviceSparseVector(V.n, copy(V.nzind), copy(V.nzval))

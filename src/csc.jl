@@ -51,7 +51,17 @@ struct DeviceSparseMatrixCSC{
     end
 end
 
-function DeviceSparseMatrixCSC(m::Integer, n::Integer, colptr, rowval, nzval)
+function DeviceSparseMatrixCSC(
+    m::Integer,
+    n::Integer,
+    colptr::ColPtrT,
+    rowval::RowValT,
+    nzval::NzValT,
+) where {
+    ColPtrT<:AbstractVector{Ti},
+    RowValT<:AbstractVector{Ti},
+    NzValT<:AbstractVector{Tv},
+} where {Ti<:Integer,Tv}
     DeviceSparseMatrixCSC{Tv,Ti,ColPtrT,RowValT,NzValT}(m, n, colptr, rowval, nzval)
 end
 
@@ -65,13 +75,5 @@ Base.length(A::DeviceSparseMatrixCSC) = A.m * A.n
 SparseArrays.nonzeros(A::DeviceSparseMatrixCSC) = A.nzval
 SparseArrays.getcolptr(A::DeviceSparseMatrixCSC) = A.colptr
 SparseArrays.rowvals(A::DeviceSparseMatrixCSC) = A.rowval
-Base.copy(
-    A::DeviceSparseMatrixCSC{Tv,Ti,ColPtrT,RowValT,NzValT},
-) where {Tv,Ti,ColPtrT,RowValT,NzValT} =
-    DeviceSparseMatrixCSC{Tv,Ti,ColPtrT,RowValT,NzValT}(
-        A.m,
-        A.n,
-        copy(A.colptr),
-        copy(A.rowval),
-        copy(A.nzval),
-    )
+Base.copy(A::DeviceSparseMatrixCSC) =
+    DeviceSparseMatrixCSC(A.m, A.n, copy(A.colptr), copy(A.rowval), copy(A.nzval))

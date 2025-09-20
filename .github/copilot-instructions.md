@@ -14,10 +14,11 @@ These guidelines give AI coding agents the minimum project-specific context to b
 - `.github/workflows/CI.yml`: Defines matrix test (Julia 1.10, 1.11, pre-release) plus docs build & doctests, plus coverage upload.
 
 ## 3. Development Workflows
-- Run tests locally: `julia --project -e 'using Pkg; Pkg.update(); Pkg.test()'` from the repo root folder.
+- Run tests locally: `make test` from the repo root folder.
 - Add a dependency: `julia --project -e 'using Pkg; Pkg.add("PackageName")'` from the repo root folder, then update `[compat]` manually with a bounded version.
-- Build docs locally: `julia --project=docs docs/make.jl` (first: `Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()` inside docs environment if needed).
-- Doctests: Any code block in docs marked for execution must pass CI doctest phase. Prefer using `jldoctest` fenced code examples.
+- Build docs locally: `make docs`.
+- Doctests: Any code block in docstrings marked for execution must pass CI doctest phase. Prefer using `jldoctest` fenced code examples in docstrings.
+- Format code: `make format`.
 
 ## 4. Coding Conventions
 - Public API: add docstrings starting with a concise one-line summary, then details (Documenter picks them up).

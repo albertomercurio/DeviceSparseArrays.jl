@@ -17,13 +17,6 @@ Root `runtests.jl` executes quality gates in the package environment, then
 activates each backend sub-environment to run functional tests for that backend.
 """
 
-@testset "Code quality (Aqua.jl)" begin
-    Aqua.test_all(DeviceSparseArrays; stale_deps = false)
-end
-@testset "Code linting (JET.jl)" begin
-    JET.test_package(DeviceSparseArrays; target_defined_modules = true)
-end
-
 # CPU backend tests
 @testset "CPU backend" begin
     import Pkg
@@ -34,4 +27,11 @@ end
     Pkg.update()
 
     include(joinpath(cpu_dir, "sparse_csc.jl"))
+end
+
+@testset "Code quality (Aqua.jl)" begin
+    Aqua.test_all(DeviceSparseArrays; stale_deps = false)
+end
+@testset "Code linting (JET.jl)" begin
+    JET.test_package(DeviceSparseArrays; target_defined_modules = true)
 end
