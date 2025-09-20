@@ -18,7 +18,7 @@ activates each backend sub-environment to run functional tests for that backend.
 """
 
 @testset "Code quality (Aqua.jl)" begin
-    Aqua.test_all(DeviceSparseArrays; stale_deps=false)
+    Aqua.test_all(DeviceSparseArrays; stale_deps = false)
 end
 @testset "Code linting (JET.jl)" begin
     JET.test_package(DeviceSparseArrays; target_defined_modules = true)

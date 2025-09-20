@@ -12,7 +12,8 @@ abstract type AbstractDeviceSparseArray{Tv,Ti,N} <: AbstractSparseArray{Tv,Ti,N}
 
 const AbstractDeviceSparseVector{Tv,Ti} = AbstractDeviceSparseArray{Tv,Ti,1}
 const AbstractDeviceSparseMatrix{Tv,Ti} = AbstractDeviceSparseArray{Tv,Ti,2}
-const AbstractDeviceSparseVecOrMat{Tv,Ti} = Union{AbstractDeviceSparseVector{Tv,Ti},AbstractDeviceSparseMatrix{Tv,Ti}}
+const AbstractDeviceSparseVecOrMat{Tv,Ti} =
+    Union{AbstractDeviceSparseVector{Tv,Ti},AbstractDeviceSparseMatrix{Tv,Ti}}
 
 function SparseArrays.nnz(A::AbstractDeviceSparseMatrix)
     length(nonzeros(A))

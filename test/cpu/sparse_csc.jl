@@ -25,17 +25,17 @@ end
 @testset "DeviceSparseMatrixCSC basic" begin
     A = spzeros(Float32, 0, 0)
     dA = DeviceSparseMatrixCSC(A)
-    @test size(dA) == (0,0)
+    @test size(dA) == (0, 0)
     @test length(dA) == 0
     @test collect(nonzeros(dA)) == Float32[]
     @test SparseMatrixCSC(dA) == A
 
-    rows = [1,2,1]
-    cols = [1,1,2]
+    rows = [1, 2, 1]
+    cols = [1, 1, 2]
     vals = [1.0, 2.0, 3.0]
     B = sparse(rows, cols, vals, 2, 2)
     dB = DeviceSparseMatrixCSC(B)
-    @test size(dB) == (2,2)
+    @test size(dB) == (2, 2)
     @test length(dB) == 4
     @test collect(nonzeros(dB)) == collect(nonzeros(B))
     @test collect(rowvals(dB)) == collect(rowvals(B))
@@ -46,5 +46,5 @@ end
     @test cp !== dB
     @test SparseMatrixCSC(cp) == B
 
-    @test_throws ArgumentError DeviceSparseMatrixCSC(2,2,[1,3], [1], [1.0])
+    @test_throws ArgumentError DeviceSparseMatrixCSC(2, 2, [1, 3], [1], [1.0])
 end

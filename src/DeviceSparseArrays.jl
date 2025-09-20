@@ -4,8 +4,8 @@ using SparseArrays
 using KernelAbstractions
 using AcceleratedKernels
 
-export AbstractDeviceSparseArray, AbstractDeviceSparseVector, AbstractDeviceSparseMatrix,
-       AbstractDeviceSparseVecOrMat
+export AbstractDeviceSparseArray,
+    AbstractDeviceSparseVector, AbstractDeviceSparseMatrix, AbstractDeviceSparseVecOrMat
 
 export DeviceSparseVector, DeviceSparseMatrixCSC
 
