@@ -44,9 +44,7 @@ struct DeviceSparseMatrixCSC{
         length(colptr) == n + 1 || throw(ArgumentError("colptr length must be n+1"))
         length(rowval) == length(nzval) ||
             throw(ArgumentError("rowval and nzval must have same length"))
-        nnz = length(nzval)
-        first(colptr) == one(Ti) || throw(ArgumentError("colptr[1] must be 1"))
-        last(colptr) == nnz + 1 || throw(ArgumentError("colptr[end] must equal nnz + 1"))
+
         return new(Int(m), Int(n), colptr, rowval, nzval)
     end
 end

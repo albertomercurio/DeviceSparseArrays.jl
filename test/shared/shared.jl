@@ -1,5 +1,5 @@
 
-function shared_test_vector(op::Function, array_type::String)
+function shared_test_vector(op, array_type::String)
     @testset "DeviceSparseVector $array_type" verbose=true begin
         @testset "Conversion" begin
             sv = SparseVector(10, Int[], Float64[])
@@ -31,7 +31,7 @@ function shared_test_vector(op::Function, array_type::String)
     end
 end
 
-function shared_test_matrix_csc(op::Function, array_type::String)
+function shared_test_matrix_csc(op, array_type::String)
     @testset "DeviceSparseMatrixCSC $array_type" verbose=true begin
         @testset "Conversion" begin
             A = spzeros(Float32, 0, 0)
@@ -49,7 +49,13 @@ function shared_test_matrix_csc(op::Function, array_type::String)
                 @test SparseMatrixCSC(dA) == A
             end
 
-            dA = DeviceSparseMatrixCSC(0, 0, op(getcolptr(A)), op(rowvals(A)), op(nonzeros(A)))
+            dA = DeviceSparseMatrixCSC(
+                0,
+                0,
+                op(getcolptr(A)),
+                op(rowvals(A)),
+                op(nonzeros(A)),
+            )
             @test size(dA) == (0, 0)
             @test length(dA) == 0
             @test nnz(dA) == 0
@@ -70,7 +76,13 @@ function shared_test_matrix_csc(op::Function, array_type::String)
             @test collect(getcolptr(dB)) == collect(getcolptr(B))
             @test SparseMatrixCSC(dB) == B
 
-            @test_throws ArgumentError DeviceSparseMatrixCSC(2, 2, op([1, 3]), op([1]), op([1.0]))
+            @test_throws ArgumentError DeviceSparseMatrixCSC(
+                2,
+                2,
+                op([1, 3]),
+                op([1]),
+                op([1.0]),
+            )
         end
     end
 end
