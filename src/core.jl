@@ -15,6 +15,6 @@ const AbstractDeviceSparseMatrix{Tv,Ti} = AbstractDeviceSparseArray{Tv,Ti,2}
 const AbstractDeviceSparseVecOrMat{Tv,Ti} =
     Union{AbstractDeviceSparseVector{Tv,Ti},AbstractDeviceSparseMatrix{Tv,Ti}}
 
-function SparseArrays.nnz(A::AbstractDeviceSparseMatrix)
+function SparseArrays.nnz(A::AbstractDeviceSparseArray)
     length(nonzeros(A))
 end

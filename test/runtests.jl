@@ -2,31 +2,22 @@ using Test
 using Aqua
 using JET
 using DeviceSparseArrays
+using SparseArrays
+using SparseArrays: nonzeroinds, getcolptr
 
-"""
-Multi-backend test runner.
+include(joinpath(@__DIR__, "shared", "shared.jl"))
 
-Layout:
-  test/
-    cpu/Project.toml            # CPU backend environment
-    cpu/*.jl                    # CPU-specific tests
-    (future) cuda/Project.toml  # CUDA backend environment
-    (future) metal/Project.toml # Metal backend environment
-
-Root `runtests.jl` executes quality gates in the package environment, then
-activates each backend sub-environment to run functional tests for that backend.
-"""
-
-# CPU backend tests
-@testset "CPU backend" begin
+# Base Array backend tests
+@testset "Base Array backend" verbose=true begin
     import Pkg
-    cpu_dir = joinpath(@__DIR__, "cpu")
+    cpu_dir = joinpath(@__DIR__, "base_array")
 
     Pkg.activate(cpu_dir)
     Pkg.develop(Pkg.PackageSpec(path = dirname(@__DIR__)))
     Pkg.update()
 
-    include(joinpath(cpu_dir, "sparse_csc.jl"))
+    shared_test_vector(identity, "Base Array")
+    shared_test_matrix_csc(identity, "Base Array")
 end
 
 @testset "Code quality (Aqua.jl)" begin

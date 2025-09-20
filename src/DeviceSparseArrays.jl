@@ -11,6 +11,6 @@ export DeviceSparseVector, DeviceSparseMatrixCSC
 
 include("core.jl")
 include("vector.jl")
-include("csc.jl")
+include("matrix_csc.jl")
 
 end # module
