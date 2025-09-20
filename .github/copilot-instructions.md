@@ -10,7 +10,6 @@ These guidelines give AI coding agents the minimum project-specific context to b
 ## 2. Repository Layout
 - `Project.toml` / `Manifest.toml`: Project environment. Add deps with compat bounds; do not remove existing `[compat]` or test extras.
 - `src/DeviceSparseArrays.jl`: Single entry point. Keep exports explicit (add an `export` block when you introduce public APIs). Keep imports explicit (use `import PackageName: symbol` or `using PackageName: symbol` as needed).
-- `test/runtests.jl`: Runs three layers: (1) Aqua quality checks `Aqua.test_all` (enforces no method ambiguities, undefined exports, piracy) (2) JET static analysis `JET.test_package` (type stability & inference warnings) (3) Placeholder for functional tests — extend with focused `@testset` blocks.
 - `docs/` (Documenter): `make.jl` sets up docs + doctests. `docs/src/index.md` auto-docs the module; adding docstrings automatically surfaces them.
 - `.github/workflows/CI.yml`: Defines matrix test (Julia 1.10, 1.11, pre-release) plus docs build & doctests, plus coverage upload.
 
@@ -29,7 +28,8 @@ These guidelines give AI coding agents the minimum project-specific context to b
 - Avoid using backend-specific packages (e.g. CUDA.jl) directly in this package; instead, use [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl), [AcceleratedKernels.jl](https://github.com/JuliaGPU/AcceleratedKernels.jl), or similar abstractions to maintain backend-agnosticism.
 
 ## 5. Testing Patterns
-- Each new feature: add a focused `@testset "FeatureName" begin ... end` after the quality test sets in `runtests.jl`.
+- Each new feature: add a focused `@testset "FeatureName" begin ... end` in a dedicated file if necessary.
+- Always test the same functionality on all the supported backends (CPU, GPU, etc.) to ensure consistent behavior and avoid repetitions when generating the problem. Make tests reusable across backends when possible.
 - Include at least one edge case (empty sparse structure, zero-sized dimensions, etc.).
 - If you add performance-oriented code, still provide a correctness test; benchmarks should NOT live in `test/` (place future benchmarks elsewhere, e.g. `bench/`).
 
