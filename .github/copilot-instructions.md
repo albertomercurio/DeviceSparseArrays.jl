@@ -8,13 +8,13 @@ These guidelines give AI coding agents the minimum project-specific context to b
 - Any new functionality you add must be inside this module and accompanied by tests + docstrings.
 
 ## 2. Repository Layout
-- `Project.toml` / `Manifest.toml`: Project environment. Add deps with compat bounds; do not remove existing `[compat]` or test extras.
+- `Project.toml` / `Manifest.toml`: Project environment. Add deps with compat bounds in alphabetical order; do not remove existing `[compat]` or test extras.
 - `src/DeviceSparseArrays.jl`: Single entry point. Keep exports explicit (add an `export` block when you introduce public APIs). Keep imports explicit (use `import PackageName: symbol` or `using PackageName: symbol` as needed).
 - `docs/` (Documenter): `make.jl` sets up docs + doctests. `docs/src/index.md` auto-docs the module; adding docstrings automatically surfaces them.
 - `.github/workflows/CI.yml`: Defines matrix test (Julia 1.10, 1.11, pre-release) plus docs build & doctests, plus coverage upload.
 
 ## 3. Development Workflows
-- Run tests locally: `julia --project -e 'using Pkg; Pkg.test()'` from the repo root folder.
+- Run tests locally: `julia --project -e 'using Pkg; Pkg.update(); Pkg.test()'` from the repo root folder.
 - Add a dependency: `julia --project -e 'using Pkg; Pkg.add("PackageName")'` from the repo root folder, then update `[compat]` manually with a bounded version.
 - Build docs locally: `julia --project=docs docs/make.jl` (first: `Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()` inside docs environment if needed).
 - Doctests: Any code block in docs marked for execution must pass CI doctest phase. Prefer using `jldoctest` fenced code examples.
@@ -30,8 +30,10 @@ These guidelines give AI coding agents the minimum project-specific context to b
 ## 5. Testing Patterns
 - Each new feature: add a focused `@testset "FeatureName" begin ... end` in a dedicated file if necessary.
 - Always test the same functionality on all the supported backends (CPU, GPU, etc.) to ensure consistent behavior and avoid repetitions when generating the problem. Make tests reusable across backends when possible.
+- The test for each backend should be in a separate Julia environment, as each machine may not have all the backends available.
 - Include at least one edge case (empty sparse structure, zero-sized dimensions, etc.).
-- If you add performance-oriented code, still provide a correctness test; benchmarks should NOT live in `test/` (place future benchmarks elsewhere, e.g. `bench/`).
+- If you add performance-oriented code, still provide a correctness test.
+- When you run tests locally, only tests for the CPU and CUDA backends, as the others are not always available.
 
 ## 6. Documentation Patterns
 

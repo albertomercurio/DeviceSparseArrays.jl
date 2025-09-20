@@ -19,7 +19,7 @@ The package aims to use [KernelAbstractions.jl](https://github.com/JuliaGPU/Kern
 You can install the package using Julia's package manager. In the Julia REPL, run:
 ```julia
 using Pkg
-Pkg.add("DeviceSparseArrays")
+Pkg.add(url="https://github.com/albertomercurio/DeviceSparseArrays.jl")
 ```
 
 ## Contributing

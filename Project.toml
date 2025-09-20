@@ -6,16 +6,23 @@ version = "0.1.0"
 [deps]
 AcceleratedKernels = "6a4ca0a5-0e36-4168-a932-d9be78d558f1"
 KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
 AcceleratedKernels = "0.4"
+Aqua = "0.8"
+JET = "0.9"
 KernelAbstractions = "0.9"
+Pkg = "1"
+SparseArrays = "1"
+Test = "1"
 julia = "1.10"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [targets]
-test = ["Aqua", "JET", "Test"]
+test = ["Aqua", "JET", "Test", "Pkg"]
