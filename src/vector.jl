@@ -27,6 +27,10 @@ struct DeviceSparseVector{
         nzind::IndT,
         nzval::ValT,
     ) where {Tv,Ti<:Integer,IndT<:AbstractVector{Ti},ValT<:AbstractVector{Tv}}
+        get_backend(nzind) == get_backend(nzval) || throw(
+            ArgumentError("Index and value vectors must be on the same device/backend."),
+        )
+
         n >= 0 || throw(ArgumentError("The number of elements must be non-negative."))
         length(nzind) == length(nzval) ||
             throw(ArgumentError("index and value vectors must be the same length"))
@@ -53,3 +57,45 @@ Base.size(V::DeviceSparseVector) = (V.n,)
 SparseArrays.nonzeros(V::DeviceSparseVector) = V.nzval
 SparseArrays.nonzeroinds(V::DeviceSparseVector) = V.nzind
 Base.copy(V::DeviceSparseVector) = DeviceSparseVector(V.n, copy(V.nzind), copy(V.nzval))
+
+function LinearAlgebra.dot(x::DeviceSparseVector, y::DenseVector)
+    length(x) == length(y) ||
+        throw(DimensionMismatch("Vector x has a length $(length(x)) but y has a length $n"))
+
+    T = Base.promote_eltype(x, y)
+
+    backend = get_backend(nonzeros(x))
+    get_backend(y) == backend ||
+        throw(ArgumentError("Vectors x and y must be on the same device/backend."))
+
+    nzind = nonzeroinds(x)
+    nzval = nonzeros(x)
+
+    # TODO: by using the view it throws scalar indexing
+    # y_view = @view(y[nzind])
+    # return dot(nzval, y_view)
+
+    backend isa KernelAbstractions.CPU && return dot(nzval, @view(y[nzind]))
+
+    @kernel function kernel_dot(res, @Const(nzval), @Const(nzind), @Const(y))
+        i = @index(Global)
+        @inbounds begin
+            @atomic res[1] += dot(nzval[i], y[nzind[i]])
+        end
+    end
+
+    m = length(nzind)
+    res = similar(nzval, T, 1)
+    fill!(res, zero(eltype(res)))
+
+    kernel = kernel_dot(backend)
+    kernel(res, nzval, nzind, y; ndrange = (m,))
+
+    return allowed_getindex(res, 1)
+end
+LinearAlgebra.dot(x::DenseVector{T1}, y::DeviceSparseVector{Tv}) where {T1<:Real,Tv<:Real} =
+    dot(y, x)
+LinearAlgebra.dot(
+    x::DenseVector{T1},
+    y::DeviceSparseVector{Tv},
+) where {T1<:Complex,Tv<:Complex} = conj(dot(y, x))

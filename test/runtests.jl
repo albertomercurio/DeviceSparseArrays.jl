@@ -25,8 +25,10 @@ end
 include(joinpath(@__DIR__, "shared", "code_quality.jl"))
 
 @testset "Code quality (Aqua.jl)" begin
-    Aqua.test_all(DeviceSparseArrays)
+    ambiguities = true # VERSION > v"1.11"
+    Aqua.test_all(DeviceSparseArrays; ambiguities = ambiguities)
 end
+
 @testset "Code linting (JET.jl)" verbose=true begin
     # JET.test_package(DeviceSparseArrays; target_defined_modules = true)
 

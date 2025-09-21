@@ -38,25 +38,16 @@ end
 
 KernelAbstractions.get_backend(A::AbstractDeviceSparseArray) = get_backend(nonzeros(A))
 
-const trans_adj_wrappers_vec =
-    ((T -> :(AbstractVector{$T}), false, identity, identity, T -> :(AbstractVector{$T})),)
-
-const trans_adj_wrappers_dense_mat = (
-    (T -> :(AbstractMatrix{$T}), false, identity, identity, T -> :(AbstractMatrix{$T})),
+const trans_adj_wrappers_dense_vecormat = (
+    (T -> :(DenseVecOrMat{$T}), false, identity, identity, T -> :(DenseVecOrMat{$T})),
     (
-        T -> :(Transpose{$T,<:AbstractMatrix{$T}}),
+        T -> :(Transpose{$T,<:DenseVecOrMat{$T}}),
         true,
         identity,
         A -> :(parent($A)),
-        T -> :(AbstractMatrix{$T}),
+        T -> :(DenseVecOrMat{$T}),
     ),
-    (
-        T -> :(Adjoint{$T,<:AbstractMatrix{$T}}),
-        true,
-        x -> :(conj($x)),
-        A -> :(parent($A)),
-        T -> :(AbstractMatrix{$T}),
-    ),
+    (T -> :(Adjoint{$T,<:DenseVecOrMat{$T}}), true, x -> :(conj($x)), A -> :(parent($A))),
 )
 
 const trans_adj_wrappers_csc = (

@@ -1,0 +1,1 @@
+Refer to .github/copilot-instructions.md for guidance.

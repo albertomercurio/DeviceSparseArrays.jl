@@ -28,6 +28,25 @@ function shared_test_vector(op, array_type::String)
             @test collect(nonzeroinds(dsv2)) == [3]
             @test SparseVector(dsv2) == sv2
         end
+
+        @testset "Basic LinearAlgebra" begin
+            for T in (Int32, Int64, Float32, Float64, ComplexF32, ComplexF64)
+                v = sprand(T, 1000, 0.01)
+                y = rand(T, 1000)
+                dv = DeviceSparseVector(1000, op(v.nzind), op(v.nzval))
+                dy = op(y)
+
+                @test sum(dv) ≈ sum(v)
+
+                if T in (ComplexF32, ComplexF64)
+                    # The kernel functions may use @atomic, which does not support Complex types in JLArray
+                    continue
+                end
+
+                @test dot(dv, dy) ≈ dot(v, y)
+                @test dot(dy, dv) ≈ conj(dot(dv, dy))
+            end
+        end
     end
 end
 

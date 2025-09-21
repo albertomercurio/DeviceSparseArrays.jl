@@ -12,7 +12,7 @@ changelog:
 	${JULIA} -e 'using Changelog; Changelog.generate(Changelog.CommonMark(), "CHANGELOG.md"; repo = "qutip/QuantumToolbox.jl")'
 
 test:
-	${JULIA} --project -e 'using Pkg; Pkg.update(); Pkg.test()'
+	${JULIA} --project=test -e 'using Pkg; Pkg.update()' && ${JULIA} --project -e 'using Pkg; Pkg.update(); Pkg.test()'
 
 docs:
 	${JULIA} --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
