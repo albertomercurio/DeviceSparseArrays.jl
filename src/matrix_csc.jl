@@ -85,181 +85,115 @@ SparseArrays.nonzeros(A::DeviceSparseMatrixCSC) = A.nzval
 SparseArrays.getcolptr(A::DeviceSparseMatrixCSC) = A.colptr
 SparseArrays.rowvals(A::DeviceSparseMatrixCSC) = A.rowval
 SparseArrays.getrowval(A::DeviceSparseMatrixCSC) = rowvals(A)
-SparseArrays.nzrange(A::DeviceSparseMatrixCSC, col::Integer) =
-    getcolptr(A)[col]:(getcolptr(A)[col+1]-1)
-
-# Matrix-vector multiplication
-for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers_csc
-    TypeA = wrapa(:(T1))
-    @eval function LinearAlgebra.mul!(
-        C::AbstractVector{T3},
-        A::$TypeA,
-        B::AbstractVector{T2},
-        α::Number,
-        β::Number,
-    ) where {T1,T2,T3}
-        size(A, 2) == length(B) || throw(
-            DimensionMismatch(
-                "second dimension of A, $(size(A,2)), does not match the length of B, $(length(B))",
-            ),
-        )
-        size(A, 1) == length(C) || throw(
-            DimensionMismatch(
-                "first dimension of A, $(size(A,1)), does not match the length of C, $(length(C))",
-            ),
-        )
-        promote_type(T2, T3, eltype(α), eltype(β)) <: T1 || throw(
-            ArgumentError(
-                "element types of B, C, α, and β must be promotable to the element type of A",
-            ),
-        )
-
-        _A = $(unwrapa(:A))
-        _B = B
-
-        backend_C = get_backend(C)
-        backend_A = get_backend(_A)
-        backend_B = get_backend(_B)
-
-        backend_A == backend_B == backend_C ||
-            throw(ArgumentError("All arrays must have the same backend"))
-
-        backend_A isa KernelAbstractions.CPU &&
-            return SparseArrays._spmatmul!(C, _A, _B, α, β)
-
-        @kernel function kernel_spmatmul_N!(
-            C,
-            @Const(colptr),
-            @Const(rowval),
-            @Const(nzval),
-            @Const(B)
-        )
-            k, col = @index(Global, NTuple)
-
-            Bi, Bj = col, k
-
-            @inbounds axj = B[Bi, Bj] * α
-            @inbounds for j = colptr[col]:(colptr[col+1]-1) # nzrange(A, col)
-                @atomic C[rowval[j], k] += $(opa(:(nzval[j]))) * axj
-            end
-        end
-
-        β != one(β) && LinearAlgebra._rmul_or_fill!(C, β)
-
-        kernel! = kernel_spmatmul_N!(backend_A)
-        kernel!(
-            C,
-            getcolptr(_A),
-            getrowval(_A),
-            getnzval(_A),
-            _B;
-            ndrange = (size(C, 2), size(_A, 2)),
-        )
-
-        return C
-    end
+function SparseArrays.nzrange(A::DeviceSparseMatrixCSC, col::Integer)
+    get_backend(A) isa KernelAbstractions.CPU ||
+        throw(ArgumentError("nzrange is only supported on CPU backend"))
+    return getcolptr(A)[col]:(getcolptr(A)[col+1]-1)
 end
 
-# Matrix-matrix multiplication
+# Matrix-Vector and Matrix-Matrix multiplication
 for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers_csc
-    for (wrapb, transb, opb, unwrapb) in trans_adj_wrappers_dense_mat
-        TypeA = wrapa(:(T1))
-        TypeB = wrapb(:(T2))
-        TypeC = :(AbstractMatrix{T3})
+    # Making a common VecOMat creates ambiguities in dispatch
+    for wrap_matorvec in (trans_adj_wrappers_vec, trans_adj_wrappers_dense_mat)
+        for (wrapb, transb, opb, unwrapb, wrapc) in wrap_matorvec
+            TypeA = wrapa(:(T1))
+            TypeB = wrapb(:(T2))
+            TypeC = wrapc(:(T3))
 
-        kernel_spmatmul! = transa ? :kernel_spmatmul_T! : :kernel_spmatmul_N!
+            kernel_spmatmul! = transa ? :kernel_spmatmul_T! : :kernel_spmatmul_N!
 
-        indB = transb ? (i, j) -> :(($j, $i)) : (i, j) -> :(($i, $j)) # transpose indices
+            indB = transb ? (i, j) -> :(($j, $i)) : (i, j) -> :(($i, $j)) # transpose indices
 
-        @eval function LinearAlgebra.mul!(
-            C::$TypeC,
-            A::$TypeA,
-            B::$TypeB,
-            α::Number,
-            β::Number,
-        ) where {T1,T2,T3}
-            size(A, 2) == size(B, 1) || throw(
-                DimensionMismatch(
-                    "second dimension of A, $(size(A,2)), does not match the first dimension of B, $(size(B,1))",
-                ),
-            )
-            size(A, 1) == size(C, 1) || throw(
-                DimensionMismatch(
-                    "first dimension of A, $(size(A,1)), does not match the first dimension of C, $(size(C,1))",
-                ),
-            )
-            size(B, 2) == size(C, 2) || throw(
-                DimensionMismatch(
-                    "second dimension of B, $(size(B,2)), does not match the second dimension of C, $(size(C,2))",
-                ),
-            )
+            @eval function LinearAlgebra.mul!(
+                C::$TypeC,
+                A::$TypeA,
+                B::$TypeB,
+                α::Number,
+                β::Number,
+            ) where {T1,T2,T3}
+                size(A, 2) == size(B, 1) || throw(
+                    DimensionMismatch(
+                        "second dimension of A, $(size(A,2)), does not match the first dimension of B, $(size(B,1))",
+                    ),
+                )
+                size(A, 1) == size(C, 1) || throw(
+                    DimensionMismatch(
+                        "first dimension of A, $(size(A,1)), does not match the first dimension of C, $(size(C,1))",
+                    ),
+                )
+                size(B, 2) == size(C, 2) || throw(
+                    DimensionMismatch(
+                        "second dimension of B, $(size(B,2)), does not match the second dimension of C, $(size(C,2))",
+                    ),
+                )
 
-            promote_type(T2, T3, eltype(α), eltype(β)) <: T1 || throw(
-                ArgumentError(
-                    "element types of B, C, α, and β must be promotable to the element type of A",
-                ),
-            )
+                promote_type(T2, T3, eltype(α), eltype(β)) <: T1 || throw(
+                    ArgumentError(
+                        "element types of B, C, α, and β must be promotable to the element type of A",
+                    ),
+                )
 
-            _A = $(unwrapa(:A))
-            _B = $(unwrapb(:B))
+                _A = $(unwrapa(:A))
+                _B = $(unwrapb(:B))
 
-            backend_C = get_backend(C)
-            backend_A = get_backend(_A)
-            backend_B = get_backend(_B)
+                backend_C = get_backend(C)
+                backend_A = get_backend(_A)
+                backend_B = get_backend(_B)
 
-            backend_A == backend_B == backend_C ||
-                throw(ArgumentError("All arrays must have the same backend"))
+                backend_A == backend_B == backend_C ||
+                    throw(ArgumentError("All arrays must have the same backend"))
 
-            backend_A isa KernelAbstractions.CPU &&
-                return SparseArrays._spmatmul!(C, _A, _B, α, β)
+                backend_A isa KernelAbstractions.CPU &&
+                    return SparseArrays._spmatmul!(C, _A, _B, α, β)
 
-            @kernel function kernel_spmatmul_N!(
-                C,
-                @Const(colptr),
-                @Const(rowval),
-                @Const(nzval),
-                @Const(B)
-            )
-                k, col = @index(Global, NTuple)
+                @kernel function kernel_spmatmul_N!(
+                    C,
+                    @Const(colptr),
+                    @Const(rowval),
+                    @Const(nzval),
+                    @Const(B)
+                )
+                    k, col = @index(Global, NTuple)
 
-                Bi, Bj = $(indB(:col, :k))
+                    Bi, Bj = $(indB(:col, :k))
 
-                @inbounds axj = $(opb(:(B[Bi, Bj]))) * α
-                @inbounds for j = colptr[col]:(colptr[col+1]-1) # nzrange(A, col)
-                    @atomic C[rowval[j], k] += $(opa(:(nzval[j]))) * axj
+                    @inbounds axj = $(opb(:(B[Bi, Bj]))) * α
+                    @inbounds for j = colptr[col]:(colptr[col+1]-1) # nzrange(A, col)
+                        @atomic C[rowval[j], k] += $(opa(:(nzval[j]))) * axj
+                    end
                 end
-            end
 
-            @kernel function kernel_spmatmul_T!(
-                C,
-                @Const(colptr),
-                @Const(rowval),
-                @Const(nzval),
-                @Const(B)
-            )
-                k, col = @index(Global, NTuple)
+                @kernel function kernel_spmatmul_T!(
+                    C,
+                    @Const(colptr),
+                    @Const(rowval),
+                    @Const(nzval),
+                    @Const(B)
+                )
+                    k, col = @index(Global, NTuple)
 
-                tmp = zero(eltype(C))
-                @inbounds for j = colptr[col]:(colptr[col+1]-1) # nzrange(A, col)
-                    Bi, Bj = $(indB(:(rowval[j]), :k))
-                    tmp += $(opa(:(nzval[j]))) * $(opb(:(B[Bi, Bj])))
+                    tmp = zero(eltype(C))
+                    @inbounds for j = colptr[col]:(colptr[col+1]-1) # nzrange(A, col)
+                        Bi, Bj = $(indB(:(rowval[j]), :k))
+                        tmp += $(opa(:(nzval[j]))) * $(opb(:(B[Bi, Bj])))
+                    end
+                    @inbounds C[col, k] += tmp * α
                 end
-                @inbounds C[col, k] += tmp * α
+
+                β != one(β) && LinearAlgebra._rmul_or_fill!(C, β)
+
+                kernel! = $kernel_spmatmul!(backend_A)
+                kernel!(
+                    C,
+                    getcolptr(_A),
+                    getrowval(_A),
+                    getnzval(_A),
+                    _B;
+                    ndrange = (size(C, 2), size(_A, 2)),
+                )
+
+                return C
             end
-
-            β != one(β) && LinearAlgebra._rmul_or_fill!(C, β)
-
-            kernel! = $kernel_spmatmul!(backend_A)
-            kernel!(
-                C,
-                getcolptr(_A),
-                getrowval(_A),
-                getnzval(_A),
-                _B;
-                ndrange = (size(C, 2), size(_A, 2)),
-            )
-
-            return C
         end
     end
 end
