@@ -118,12 +118,12 @@ function shared_test_matrix_csc(op, array_type::String)
                 @test collect(dc2) ≈ c atol=1e-8
 
                 # Matrix-Matrix multiplication
-                # dB = op(B)
-                # dC = dA * dB
-                # @test collect(dC) ≈ C atol=1e-8
-                # dC2 = similar(dB, size(dA, 1), size(dB, 2))
-                # mul!(dC2, dA, dB)
-                # @test collect(dC2) ≈ C atol=1e-8
+                dB = op(B)
+                dC = dA * dB
+                @test collect(dC) ≈ C atol=1e-8
+                dC2 = similar(dB, size(dA, 1), size(dB, 2))
+                mul!(dC2, dA, dB)
+                @test collect(dC2) ≈ C atol=1e-8
             end
         end
     end

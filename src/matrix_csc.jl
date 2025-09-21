@@ -76,7 +76,13 @@ Base.copy(A::DeviceSparseMatrixCSC) =
 Base.collect(A::DeviceSparseMatrixCSC) = collect(SparseMatrixCSC(A))
 
 function Base.:(*)(α::Number, A::DeviceSparseMatrixCSC)
-    return DeviceSparseMatrixCSC(A.m, A.n, getcolptr(A), rowvals(A), α .* nonzeros(A))
+    return DeviceSparseMatrixCSC(
+        A.m,
+        A.n,
+        getcolptr(A),
+        rowvals(A),
+        α .* nonzeros(A),
+    )
 end
 Base.:(*)(A::DeviceSparseMatrixCSC, α::Number) = α * A
 Base.:(/)(A::DeviceSparseMatrixCSC, α::Number) = (1 / α) * A # rdiv!(copy(A), α) (not supported on JLArray)
