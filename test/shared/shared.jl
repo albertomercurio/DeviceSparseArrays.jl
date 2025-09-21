@@ -84,5 +84,47 @@ function shared_test_matrix_csc(op, array_type::String)
                 op([1.0]),
             )
         end
+
+        @testset "Matrix-Scalar, Matrix-Vector and Matrix-Matrix multiplication" begin
+            for T in (Int32, Int64, Float32, Float64)
+                println("Testing type $T")
+                A = sprand(T, 100, 80, 0.1)
+                B = rand(T, 80, 50)
+                b = rand(T, 80)
+                c = A * b
+                C = A * B
+
+                dA = DeviceSparseMatrixCSC(
+                    size(A, 1),
+                    size(A, 2),
+                    op(getcolptr(A)),
+                    op(rowvals(A)),
+                    op(nonzeros(A)),
+                )
+
+                # Matrix-Scalar multiplication
+                if T != Int32
+                    @test collect(2 * dA) ≈ 2 * collect(A) atol=1e-8
+                    @test collect(dA * 2) ≈ collect(A * 2) atol=1e-8
+                    @test collect(dA / 2) ≈ collect(A / 2) atol=1e-8
+                end
+
+                # Matrix-Vector multiplication
+                db = op(b)
+                dc = dA * db
+                @test collect(dc) ≈ c atol=1e-8
+                dc2 = similar(dc)
+                mul!(dc2, dA, db)
+                @test collect(dc2) ≈ c atol=1e-8
+
+                # Matrix-Matrix multiplication
+                # dB = op(B)
+                # dC = dA * dB
+                # @test collect(dC) ≈ C atol=1e-8
+                # dC2 = similar(dB, size(dA, 1), size(dB, 2))
+                # mul!(dC2, dA, dB)
+                # @test collect(dC2) ≈ C atol=1e-8
+            end
+        end
     end
 end

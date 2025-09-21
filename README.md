@@ -10,6 +10,7 @@ DeviceSparseArrays.jl is a Julia package that provides backend-agnostic sparse a
 - CPU (using standard Julia arrays)
 - GPU (using [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl), [AMDGPU.jl](https://github.com/JuliaGPU/AMDGPU.jl), [oneAPI.jl](https://github.com/JuliaGPU/oneAPI.jl), [Metal.jl](https://github.com/JuliaGPU/Metal.jl), etc.)
 - [Reactant.jl](https://github.com/EnzymeAD/Reactant.jl) (for XLA acceleration)
+- [StaticArrays.jl](https://github.com/JuliaArrays/StaticArrays.jl) (for small, stack-allocated arrays)
 - [FixedSizeArrays.jl](https://github.com/JuliaArrays/FixedSizeArrays.jl) (for arrays with statically known sizes)
 - Other accelerators as they become supported in the Julia ecosystem
 

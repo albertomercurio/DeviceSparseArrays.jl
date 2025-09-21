@@ -1,7 +1,12 @@
 module DeviceSparseArrays
 
+using LinearAlgebra
+import LinearAlgebra: wrap
 using SparseArrays
-using KernelAbstractions
+import SparseArrays: getcolptr, getrowval, getnzval
+
+import KernelAbstractions
+import KernelAbstractions: @kernel, @atomic, @index, get_backend
 using AcceleratedKernels
 
 export AbstractDeviceSparseArray,

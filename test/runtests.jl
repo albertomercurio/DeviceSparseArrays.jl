@@ -2,6 +2,7 @@ using Test
 using Aqua
 using JET
 using DeviceSparseArrays
+using LinearAlgebra
 using SparseArrays
 using SparseArrays: nonzeroinds, getcolptr
 

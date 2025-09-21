@@ -78,7 +78,7 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 version = "1.11.0"
 
 [[deps.DeviceSparseArrays]]
-deps = ["AcceleratedKernels", "KernelAbstractions", "SparseArrays"]
+deps = ["AcceleratedKernels", "KernelAbstractions", "LinearAlgebra", "SparseArrays"]
 path = "/home/alberto/.julia/dev/DeviceSparseArrays"
 uuid = "da3fe0eb-88a8-4d14-ae1a-857c283e9c70"
 version = "0.1.0"
