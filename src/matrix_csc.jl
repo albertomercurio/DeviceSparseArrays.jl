@@ -76,13 +76,7 @@ Base.copy(A::DeviceSparseMatrixCSC) =
 Base.collect(A::DeviceSparseMatrixCSC) = collect(SparseMatrixCSC(A))
 
 function Base.:(*)(α::Number, A::DeviceSparseMatrixCSC)
-    return DeviceSparseMatrixCSC(
-        A.m,
-        A.n,
-        getcolptr(A),
-        rowvals(A),
-        α .* nonzeros(A),
-    )
+    return DeviceSparseMatrixCSC(A.m, A.n, getcolptr(A), rowvals(A), α .* nonzeros(A))
 end
 Base.:(*)(A::DeviceSparseMatrixCSC, α::Number) = α * A
 Base.:(/)(A::DeviceSparseMatrixCSC, α::Number) = (1 / α) * A # rdiv!(copy(A), α) (not supported on JLArray)
@@ -91,6 +85,8 @@ SparseArrays.nonzeros(A::DeviceSparseMatrixCSC) = A.nzval
 SparseArrays.getcolptr(A::DeviceSparseMatrixCSC) = A.colptr
 SparseArrays.rowvals(A::DeviceSparseMatrixCSC) = A.rowval
 SparseArrays.getrowval(A::DeviceSparseMatrixCSC) = rowvals(A)
+SparseArrays.nzrange(A::DeviceSparseMatrixCSC, col::Integer) =
+    getcolptr(A)[col]:(getcolptr(A)[col+1]-1)
 
 # Matrix-vector multiplication
 for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers_csc
@@ -127,6 +123,9 @@ for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers_csc
 
         backend_A == backend_B == backend_C ||
             throw(ArgumentError("All arrays must have the same backend"))
+
+        backend_A isa KernelAbstractions.CPU &&
+            return SparseArrays._spmatmul!(C, _A, _B, α, β)
 
         @kernel function kernel_spmatmul_N!(
             C,
@@ -210,6 +209,9 @@ for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers_csc
 
             backend_A == backend_B == backend_C ||
                 throw(ArgumentError("All arrays must have the same backend"))
+
+            backend_A isa KernelAbstractions.CPU &&
+                return SparseArrays._spmatmul!(C, _A, _B, α, β)
 
             @kernel function kernel_spmatmul_N!(
                 C,

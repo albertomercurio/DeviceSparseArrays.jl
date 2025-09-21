@@ -86,8 +86,11 @@ function shared_test_matrix_csc(op, array_type::String)
         end
 
         @testset "Matrix-Scalar, Matrix-Vector and Matrix-Matrix multiplication" begin
-            for T in (Int32, Int64, Float32, Float64)
-                println("Testing type $T")
+            for T in (Int32, Int64, Float64, ComplexF32, ComplexF64)
+                if T in (ComplexF32, ComplexF64) && array_type != "Base Array"
+                    # The mul! function uses @atomic for CSC matrices, which does not support Complex types in JLArray
+                    continue
+                end
                 A = sprand(T, 100, 80, 0.1)
                 B = rand(T, 80, 50)
                 b = rand(T, 80)
