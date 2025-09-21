@@ -5,6 +5,8 @@ import LinearAlgebra: wrap
 using SparseArrays
 import SparseArrays: getcolptr, getrowval, getnzval
 
+import ArrayInterface: allowed_getindex, allowed_setindex!
+
 import KernelAbstractions
 import KernelAbstractions: @kernel, @atomic, @index, get_backend
 using AcceleratedKernels

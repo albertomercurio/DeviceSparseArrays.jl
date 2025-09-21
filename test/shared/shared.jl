@@ -85,6 +85,28 @@ function shared_test_matrix_csc(op, array_type::String)
             )
         end
 
+        @testset "Basic LinearAlgebra" begin
+            for T in (Int32, Int64, Float32, Float64, ComplexF32, ComplexF64)
+                A = sprand(T, 1000, 1000, 0.01)
+                dA = DeviceSparseMatrixCSC(
+                    A.m,
+                    A.n,
+                    op(getcolptr(A)),
+                    op(rowvals(A)),
+                    op(nonzeros(A)),
+                )
+
+                @test sum(dA) ≈ sum(A)
+
+                if T in (ComplexF32, ComplexF64)
+                    # The kernel functions may use @atomic, which does not support Complex types in JLArray
+                    continue
+                end
+
+                @test tr(dA) ≈ tr(A)
+            end
+        end
+
         @testset "Matrix-Scalar, Matrix-Vector and Matrix-Matrix multiplication" begin
             for T in (Int32, Int64, Float64, ComplexF32, ComplexF64)
                 if T in (ComplexF32, ComplexF64) && array_type != "Base Array"
@@ -107,26 +129,26 @@ function shared_test_matrix_csc(op, array_type::String)
 
                 # Matrix-Scalar multiplication
                 if T != Int32
-                    @test collect(2 * dA) ≈ 2 * collect(A) atol=1e-8
-                    @test collect(dA * 2) ≈ collect(A * 2) atol=1e-8
-                    @test collect(dA / 2) ≈ collect(A / 2) atol=1e-8
+                    @test collect(2 * dA) ≈ 2 * collect(A)
+                    @test collect(dA * 2) ≈ collect(A * 2)
+                    @test collect(dA / 2) ≈ collect(A / 2)
                 end
 
                 # Matrix-Vector multiplication
                 db = op(b)
                 dc = dA * db
-                @test collect(dc) ≈ c atol=1e-8
+                @test collect(dc) ≈ c
                 dc2 = similar(dc)
                 mul!(dc2, dA, db)
-                @test collect(dc2) ≈ c atol=1e-8
+                @test collect(dc2) ≈ c
 
                 # Matrix-Matrix multiplication
                 dB = op(B)
                 dC = dA * dB
-                @test collect(dC) ≈ C atol=1e-8
+                @test collect(dC) ≈ C
                 dC2 = similar(dB, size(dA, 1), size(dB, 2))
                 mul!(dC2, dA, dB)
-                @test collect(dC2) ≈ C atol=1e-8
+                @test collect(dC2) ≈ C
             end
         end
     end

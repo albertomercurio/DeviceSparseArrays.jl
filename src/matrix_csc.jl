@@ -91,6 +91,32 @@ function SparseArrays.nzrange(A::DeviceSparseMatrixCSC, col::Integer)
     return getcolptr(A)[col]:(getcolptr(A)[col+1]-1)
 end
 
+function LinearAlgebra.tr(A::DeviceSparseMatrixCSC)
+    m, n = size(A)
+    m == n || throw(DimensionMismatch("Matrix must be square to compute the trace."))
+
+    # TODO: use AK.mapreduce instead?
+    backend = get_backend(A)
+
+    @kernel function kernel_tr(res, @Const(colptr), @Const(rowval), @Const(nzval))
+        col = @index(Global)
+
+        @inbounds for j = colptr[col]:(colptr[col+1]-1)
+            if rowval[j] == col
+                @atomic res[1] += nzval[j]
+            end
+        end
+    end
+
+    res = similar(nonzeros(A), 1)
+    fill!(res, zero(eltype(A)))
+
+    kernel = kernel_tr(backend)
+    kernel(res, getcolptr(A), getrowval(A), getnzval(A); ndrange = (n,))
+
+    return allowed_getindex(res, 1)
+end
+
 # Matrix-Vector and Matrix-Matrix multiplication
 for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers_csc
     # Making a common VecOMat creates ambiguities in dispatch
