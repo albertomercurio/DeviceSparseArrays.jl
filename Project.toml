@@ -13,6 +13,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 AcceleratedKernels = "0.4"
 Aqua = "0.8"
 JET = "0.9"
+JLArrays = "0.2.0"
 KernelAbstractions = "0.9"
 LinearAlgebra = "1"
 Pkg = "1"
@@ -23,8 +24,9 @@ julia = "1.10"
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
+JLArrays = "27aeb0d3-9eb9-45fb-866b-73c2ecf80fcb"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Aqua", "JET", "Test", "Pkg"]
+test = ["Aqua", "JET", "Test", "Pkg", "JLArrays"]
