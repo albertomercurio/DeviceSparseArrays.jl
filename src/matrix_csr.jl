@@ -89,6 +89,8 @@ function SparseMatrixCSC(A::DeviceSparseMatrixCSR)
     return SparseMatrixCSC(transpose(At_csc))
 end
 
+@adapt_structure DeviceSparseMatrixCSR
+
 Base.size(A::DeviceSparseMatrixCSR) = (A.m, A.n)
 Base.length(A::DeviceSparseMatrixCSR) = A.m * A.n
 Base.copy(A::DeviceSparseMatrixCSR) =

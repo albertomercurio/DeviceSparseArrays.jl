@@ -11,6 +11,8 @@ import KernelAbstractions
 import KernelAbstractions: @kernel, @atomic, @index, get_backend, synchronize
 using AcceleratedKernels
 
+import Adapt: @adapt_structure
+
 export AbstractDeviceSparseArray,
     AbstractDeviceSparseVector, AbstractDeviceSparseMatrix, AbstractDeviceSparseVecOrMat
 

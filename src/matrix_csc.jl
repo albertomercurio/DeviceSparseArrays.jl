@@ -74,6 +74,8 @@ DeviceSparseMatrixCSC(A::SparseMatrixCSC) =
 SparseMatrixCSC(A::DeviceSparseMatrixCSC) =
     SparseMatrixCSC(A.m, A.n, collect(A.colptr), collect(A.rowval), collect(A.nzval))
 
+@adapt_structure DeviceSparseMatrixCSC
+
 Base.size(A::DeviceSparseMatrixCSC) = (A.m, A.n)
 Base.length(A::DeviceSparseMatrixCSC) = A.m * A.n
 Base.copy(A::DeviceSparseMatrixCSC) =

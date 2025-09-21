@@ -51,6 +51,8 @@ end
 DeviceSparseVector(V::SparseVector) = DeviceSparseVector(V.n, V.nzind, V.nzval)
 SparseVector(V::DeviceSparseVector) = SparseVector(V.n, collect(V.nzind), collect(V.nzval))
 
+@adapt_structure DeviceSparseVector
+
 # Basic methods
 Base.length(V::DeviceSparseVector) = V.n
 Base.size(V::DeviceSparseVector) = (V.n,)
