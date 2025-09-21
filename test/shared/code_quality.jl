@@ -48,7 +48,65 @@ function shared_test_matrix_csc_quality_spmv_spmm(op, array_type::String)
         dB = op(B)
         db = op(b)
 
-        # Matrix-Vector multiplication
+        # Matrix-Vector and Matrix-Matrix multiplication
+        dA * db
+        dA * dB
+    end
+end
+
+function shared_test_matrix_csr_quality(op, array_type::String)
+    shared_test_matrix_csr_quality_basic_linearalgebra(op, array_type)
+    shared_test_matrix_csr_quality_spmv(op, array_type)
+end
+
+function shared_test_matrix_csr_quality_basic_linearalgebra(op, array_type::String)
+    for T in (Int32, Int64, Float32, Float64, ComplexF32, ComplexF64)
+        A = sprand(T, 1000, 1000, 0.01)
+        # Convert to CSR storage pattern
+        A_csr = SparseMatrixCSC(transpose(A))
+        dA = DeviceSparseMatrixCSR(
+            A.m,
+            A.n,
+            op(A_csr.colptr),  # rowptr
+            op(A_csr.rowval),  # colval
+            op(A_csr.nzval),   # nzval
+        )
+
+        sum(dA)
+
+        if T in (ComplexF32, ComplexF64)
+            # The kernel functions may use @atomic for CSR matrices, which does not support Complex types in JLArray
+            continue
+        end
+
+        tr(dA)
+    end
+end
+
+function shared_test_matrix_csr_quality_spmv(op, array_type::String)
+    for T in (Int32, Int64, Float64, ComplexF32, ComplexF64)
+        if T in (ComplexF32, ComplexF64) && array_type != "Base Array"
+            # The mul! function uses @atomic for CSR matrices, which does not support Complex types in JLArray
+            continue
+        end
+
+        A = sprand(T, 100, 80, 0.1)
+        B = rand(T, 80, 50)
+        b = rand(T, 80)
+
+        # Convert to CSR storage pattern
+        A_csr = SparseMatrixCSC(transpose(A))
+        dA = DeviceSparseMatrixCSC(
+            size(A, 1),
+            size(A, 2),
+            op(getcolptr(A_csr)),
+            op(rowvals(A_csr)),
+            op(nonzeros(A_csr)),
+        )
+        dB = op(B)
+        db = op(b)
+
+        # Matrix-Vector and Matrix-Matrix multiplication
         dA * db
         dA * dB
     end

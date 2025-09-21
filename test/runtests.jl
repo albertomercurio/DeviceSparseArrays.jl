@@ -7,6 +7,7 @@ using JLArrays
 using LinearAlgebra
 using SparseArrays
 using SparseArrays: nonzeroinds, getcolptr
+using DeviceSparseArrays: getrowptr, colvals
 
 include(joinpath(@__DIR__, "shared", "shared.jl"))
 
@@ -18,6 +19,7 @@ const cpu_backend_funcs = (identity, JLArray)
         @testset "$name Backend" verbose=true begin
             shared_test_vector(func, name)
             shared_test_matrix_csc(func, name)
+            shared_test_matrix_csr(func, name)
         end
     end
 end
@@ -36,9 +38,11 @@ end
         @testset "$name Backend" verbose=true begin
             @report_opt shared_test_vector_quality(func, name)
             @report_opt shared_test_matrix_csc_quality(func, name)
+            @report_opt shared_test_matrix_csr_quality(func, name)
 
             @report_call shared_test_vector_quality(func, name)
             @report_call shared_test_matrix_csc_quality(func, name)
+            @report_call shared_test_matrix_csr_quality(func, name)
         end
     end
 end

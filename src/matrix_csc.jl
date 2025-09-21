@@ -124,8 +124,8 @@ function LinearAlgebra.tr(A::DeviceSparseMatrixCSC)
 end
 
 # Matrix-Vector and Matrix-Matrix multiplication
-for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers_csc
-    for (wrapb, transb, opb, unwrapb) in trans_adj_wrappers_dense_vecormat
+for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers(:DeviceSparseMatrixCSC)
+    for (wrapb, transb, opb, unwrapb) in trans_adj_wrappers(:DenseVecOrMat)
         TypeA = wrapa(:(T1))
         TypeB = wrapb(:(T2))
         TypeC = :(DenseVecOrMat{T3})

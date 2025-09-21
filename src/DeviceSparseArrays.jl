@@ -14,10 +14,11 @@ using AcceleratedKernels
 export AbstractDeviceSparseArray,
     AbstractDeviceSparseVector, AbstractDeviceSparseMatrix, AbstractDeviceSparseVecOrMat
 
-export DeviceSparseVector, DeviceSparseMatrixCSC
+export DeviceSparseVector, DeviceSparseMatrixCSC, DeviceSparseMatrixCSR
 
 include("core.jl")
 include("vector.jl")
 include("matrix_csc.jl")
+include("matrix_csr.jl")
 
 end # module
