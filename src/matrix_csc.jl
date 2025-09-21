@@ -173,8 +173,8 @@ for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers(:DeviceSparseMatrixCSC)
             backend_A == backend_B == backend_C ||
                 throw(ArgumentError("All arrays must have the same backend"))
 
-            backend_A isa KernelAbstractions.CPU &&
-                return SparseArrays._spmatmul!(C, _A, _B, α, β)
+            # backend_A isa KernelAbstractions.CPU &&
+            #     return SparseArrays._spmatmul!(C, _A, _B, α, β)
 
             @kernel function kernel_spmatmul_N!(
                 C,

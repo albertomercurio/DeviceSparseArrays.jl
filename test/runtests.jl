@@ -9,7 +9,9 @@ using SparseArrays
 using SparseArrays: nonzeroinds, getcolptr
 using DeviceSparseArrays: getrowptr, colvals
 
-include(joinpath(@__DIR__, "shared", "shared.jl"))
+include(joinpath(@__DIR__, "shared", "vector.jl"))
+include(joinpath(@__DIR__, "shared", "matrix_csc.jl"))
+include(joinpath(@__DIR__, "shared", "matrix_csr.jl"))
 
 const cpu_backend_names = ("Base Array", "JLArray")
 const cpu_backend_funcs = (identity, JLArray)
@@ -36,13 +38,63 @@ end
 
     for (name, func) in zip(cpu_backend_names, cpu_backend_funcs)
         @testset "$name Backend" verbose=true begin
-            @report_opt shared_test_vector_quality(func, name)
-            @report_opt shared_test_matrix_csc_quality(func, name)
-            @report_opt shared_test_matrix_csr_quality(func, name)
+            @test_opt target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_vector_quality(
+                func,
+                Float64;
+            )
+            @test_opt target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_matrix_csc_quality(
+                func,
+                Float64;
+                op_A = adjoint,
+                op_B = identity,
+            )
+            @test_opt target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_matrix_csc_quality(
+                func,
+                Float64;
+                op_A = adjoint,
+                op_B = adjoint,
+            )
+            @test_opt target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_matrix_csr_quality(
+                func,
+                Float64;
+                op_A = identity,
+                op_B = identity,
+            )
+            @test_opt target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_matrix_csr_quality(
+                func,
+                Float64;
+                op_A = identity,
+                op_B = adjoint,
+            )
 
-            @report_call shared_test_vector_quality(func, name)
-            @report_call shared_test_matrix_csc_quality(func, name)
-            @report_call shared_test_matrix_csr_quality(func, name)
+            @test_call target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_vector_quality(
+                func,
+                Float64;
+            )
+            @test_call target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_matrix_csc_quality(
+                func,
+                Float64;
+                op_A = adjoint,
+                op_B = identity,
+            )
+            @test_call target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_matrix_csc_quality(
+                func,
+                Float64;
+                op_A = adjoint,
+                op_B = adjoint,
+            )
+            @test_call target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_matrix_csr_quality(
+                func,
+                Float64;
+                op_A = identity,
+                op_B = identity,
+            )
+            @test_call target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_matrix_csr_quality(
+                func,
+                Float64;
+                op_A = identity,
+                op_B = adjoint,
+            )
         end
     end
 end
