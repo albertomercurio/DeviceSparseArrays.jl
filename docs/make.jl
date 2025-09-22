@@ -17,7 +17,7 @@ makedocs(;
         edit_link = "main",
         assets = String[],
     ),
-    pages = ["Home" => "index.md"],
+    pages = ["Home" => "index.md", "API Reference" => "api.md"],
 )
 
 deploydocs(; repo = "github.com/albertomercurio/DeviceSparseArrays.jl", devbranch = "main")
