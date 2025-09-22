@@ -23,6 +23,72 @@ using Pkg
 Pkg.add(url="https://github.com/albertomercurio/DeviceSparseArrays.jl")
 ```
 
+## Usage Examples
+
+### Basic Usage with CSC Matrices
+
+```julia
+using DeviceSparseArrays
+using SparseArrays
+using LinearAlgebra
+
+# Create a 100x80 sparse matrix with 10% sparsity
+A_sparse = sprand(Float64, 100, 80, 0.1)
+
+# Convert to DeviceSparseMatrixCSC (CPU by default)
+A_device = DeviceSparseMatrixCSC(A_sparse)
+
+# Create a vector for matrix-vector multiplication
+b = rand(Float64, 3)
+
+# Perform matrix-vector multiplication
+c = A_device * b
+
+# You can also use the in-place mul! function
+c_result = similar(b)
+mul!(c_result, A_device, b)
+```
+
+### GPU Backend Usage
+
+```julia
+# For CUDA backend
+using CUDA
+A_cuda = adapt(CuArray, A_device)
+b_cuda = CuArray(b)
+c_cuda = A_cuda * b_cuda
+
+# For Metal backend (on Apple Silicon)
+using Metal
+A_metal = adapt(MtlArray, A_device)
+b_metal = MtlArray(b)
+c_metal = A_metal * b_metal
+
+# For Reactant backend (XLA acceleration)
+using Reactant
+A_reactant = adapt(Reactant.ConcreteRArray, A_device)
+b_reactant = Reactant.ConcreteRArray(b)
+c_reactant = A_reactant * b_reactant
+```
+
+### CSR Matrix Format
+
+```julia
+# Create a sparse matrix and convert to CSR format
+A_sparse = sprand(Float64, 100, 80, 0.1)  # 100x80 matrix with 10% sparsity
+A_csr = DeviceSparseMatrixCSR(A_sparse)
+
+# Convert to different backends
+A_csr_cuda = adapt(CuArray, A_csr)
+A_csr_metal = adapt(MtlArray, A_csr)
+A_csr_reactant = adapt(Reactant.ConcreteRArray, A_csr)
+
+# Matrix-vector multiplication with CSR format
+b = rand(Float64, 80)
+b_device = CuArray(b)  # or MtlArray(b), etc.
+c = A_csr_cuda * b_device
+```
+
 ## Contributing
 Contributions are welcome!
 

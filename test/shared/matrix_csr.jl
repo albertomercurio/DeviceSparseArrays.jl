@@ -18,16 +18,17 @@ function shared_test_matrix_csr(op, array_type::String)
                 @test SparseMatrixCSC(dA) == A
             end
 
-            # Convert CSC to CSR pattern by transposing
             B_csr = SparseMatrixCSC(transpose(B))  # Get the CSR storage pattern
             dB = adapt(op, DeviceSparseMatrixCSR(transpose(B_csr)))
+            dB2 = adapt(op, DeviceSparseMatrixCSR(B)) # Directly from CSC should also work
             @test size(dB) == (2, 2)
             @test length(dB) == 4
             @test nnz(dB) == 3
-            @test collect(nonzeros(dB)) == collect(B_csr.nzval)
-            @test collect(colvals(dB)) == collect(B_csr.rowval)
-            @test collect(getrowptr(dB)) == collect(B_csr.colptr)
+            @test collect(nonzeros(dB)) == B_csr.nzval
+            @test collect(colvals(dB)) == B_csr.rowval
+            @test collect(getrowptr(dB)) == B_csr.colptr
             @test SparseMatrixCSC(dB) == B
+            @test SparseMatrixCSC(dB2) == B
 
             @test_throws ArgumentError DeviceSparseMatrixCSR(
                 2,
@@ -42,8 +43,7 @@ function shared_test_matrix_csr(op, array_type::String)
             for T in (Int32, Int64, Float32, Float64, ComplexF32, ComplexF64)
                 A = sprand(T, 1000, 1000, 0.01)
                 # Convert to CSR storage pattern
-                A_csr = SparseMatrixCSC(transpose(A))
-                dA = adapt(op, DeviceSparseMatrixCSR(transpose(A_csr)))
+                dA = adapt(op, DeviceSparseMatrixCSR(A))
 
                 @test sum(dA) ≈ sum(A)
 
@@ -76,8 +76,7 @@ function shared_test_matrix_csr(op, array_type::String)
                     C = op_A(A) * op_B(B)
 
                     # Convert to CSR storage pattern
-                    A_csr = SparseMatrixCSC(transpose(A))
-                    dA = adapt(op, DeviceSparseMatrixCSR(transpose(A_csr)))
+                    dA = adapt(op, DeviceSparseMatrixCSR(A))
 
                     # Matrix-Scalar multiplication
                     if T != Int32
