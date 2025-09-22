@@ -164,7 +164,7 @@ for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers(:DeviceSparseMatrixCSR)
 
         indB = transb ? (i, j) -> :(($j, $i)) : (i, j) -> :(($i, $j)) # transpose indices
 
-        @eval function sp_mm!(
+        @eval function LinearAlgebra.mul!(
             C::$TypeC,
             A::$TypeA,
             B::$TypeB,
