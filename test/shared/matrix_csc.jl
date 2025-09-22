@@ -8,7 +8,7 @@ function shared_test_matrix_csc(op, array_type::String)
             B = sparse(rows, cols, vals, 2, 2)
 
             # test only conversion SparseMatrixCSC <-> DeviceSparseMatrixCSC
-            if op === identity
+            if op === Array
                 dA = DeviceSparseMatrixCSC(A)
                 @test size(dA) == (0, 0)
                 @test length(dA) == 0
@@ -16,25 +16,13 @@ function shared_test_matrix_csc(op, array_type::String)
                 @test SparseMatrixCSC(dA) == A
             end
 
-            dA = DeviceSparseMatrixCSC(
-                0,
-                0,
-                op(getcolptr(A)),
-                op(rowvals(A)),
-                op(nonzeros(A)),
-            )
+            dA = adapt(op, DeviceSparseMatrixCSC(A))
             @test size(dA) == (0, 0)
             @test length(dA) == 0
             @test nnz(dA) == 0
             @test collect(nonzeros(dA)) == Float32[]
 
-            dB = DeviceSparseMatrixCSC(
-                2,
-                2,
-                op(getcolptr(B)),
-                op(rowvals(B)),
-                op(nonzeros(B)),
-            )
+            dB = adapt(op, DeviceSparseMatrixCSC(B))
             @test size(dB) == (2, 2)
             @test length(dB) == 4
             @test nnz(dB) == 3
@@ -55,13 +43,7 @@ function shared_test_matrix_csc(op, array_type::String)
         @testset "Basic LinearAlgebra" begin
             for T in (Int32, Int64, Float32, Float64, ComplexF32, ComplexF64)
                 A = sprand(T, 1000, 1000, 0.01)
-                dA = DeviceSparseMatrixCSC(
-                    A.m,
-                    A.n,
-                    op(getcolptr(A)),
-                    op(rowvals(A)),
-                    op(nonzeros(A)),
-                )
+                dA = adapt(op, DeviceSparseMatrixCSC(A))
 
                 @test sum(dA) ≈ sum(A)
 
@@ -93,13 +75,7 @@ function shared_test_matrix_csc(op, array_type::String)
                     c = op_A(A) * b
                     C = op_A(A) * op_B(B)
 
-                    dA = DeviceSparseMatrixCSC(
-                        size(A, 1),
-                        size(A, 2),
-                        op(getcolptr(A)),
-                        op(rowvals(A)),
-                        op(nonzeros(A)),
-                    )
+                    dA = adapt(op, DeviceSparseMatrixCSC(A))
 
                     # Matrix-Scalar multiplication
                     if T != Int32

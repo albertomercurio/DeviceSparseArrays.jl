@@ -5,21 +5,21 @@ function shared_test_vector(op, array_type::String)
             sv2 = sparsevec([3], [2.5], 8)
 
             # test only conversion SparseVector <-> DeviceSparseVector
-            if op === identity
+            if op === Array
                 dsv = DeviceSparseVector(sv)
                 @test size(dsv) == (10,)
                 @test length(dsv) == 10
                 @test SparseVector(dsv) == sv
             end
 
-            dsv = DeviceSparseVector(10, op(sv.nzind), op(sv.nzval))
+            dsv = adapt(op, DeviceSparseVector(sv))
             @test size(dsv) == (10,)
             @test length(dsv) == 10
             @test nnz(dsv) == 0
             @test collect(nonzeros(dsv)) == Float64[]
             @test collect(nonzeroinds(dsv)) == Int[]
 
-            dsv2 = DeviceSparseVector(8, op(sv2.nzind), op(sv2.nzval))
+            dsv2 = adapt(op, DeviceSparseVector(sv2))
             @test size(dsv2) == (8,)
             @test length(dsv2) == 8
             @test nnz(dsv2) == 1
@@ -32,7 +32,7 @@ function shared_test_vector(op, array_type::String)
             for T in (Int32, Int64, Float32, Float64, ComplexF32, ComplexF64)
                 v = sprand(T, 1000, 0.01)
                 y = rand(T, 1000)
-                dv = DeviceSparseVector(1000, op(v.nzind), op(v.nzval))
+                dv = adapt(op, DeviceSparseVector(v))
                 dy = op(y)
 
                 @test sum(dv) ≈ sum(v)

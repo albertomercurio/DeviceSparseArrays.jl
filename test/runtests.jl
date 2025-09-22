@@ -3,6 +3,7 @@ using Aqua
 using JET
 using DeviceSparseArrays
 using JLArrays
+using Adapt
 
 using LinearAlgebra
 using SparseArrays
@@ -14,7 +15,7 @@ include(joinpath(@__DIR__, "shared", "matrix_csc.jl"))
 include(joinpath(@__DIR__, "shared", "matrix_csr.jl"))
 
 const cpu_backend_names = ("Base Array", "JLArray")
-const cpu_backend_funcs = (identity, JLArray)
+const cpu_backend_funcs = (Array, JLArray)
 
 @testset "CPU" verbose=true begin
     for (name, func) in zip(cpu_backend_names, cpu_backend_funcs)

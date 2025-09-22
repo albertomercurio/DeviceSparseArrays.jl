@@ -10,7 +10,7 @@ function shared_test_matrix_csr(op, array_type::String)
             B = sparse(rows, cols, vals, 2, 2)
 
             # test only conversion SparseMatrixCSC <-> DeviceSparseMatrixCSR
-            if op === identity
+            if op === Array
                 dA = DeviceSparseMatrixCSR(A)
                 @test size(dA) == (0, 0)
                 @test length(dA) == 0
@@ -20,13 +20,7 @@ function shared_test_matrix_csr(op, array_type::String)
 
             # Convert CSC to CSR pattern by transposing
             B_csr = SparseMatrixCSC(transpose(B))  # Get the CSR storage pattern
-            dB = DeviceSparseMatrixCSR(
-                2,
-                2,
-                op(B_csr.colptr),  # rowptr in CSR
-                op(B_csr.rowval),  # colval in CSR
-                op(B_csr.nzval),   # nzval in CSR
-            )
+            dB = adapt(op, DeviceSparseMatrixCSR(transpose(B_csr)))
             @test size(dB) == (2, 2)
             @test length(dB) == 4
             @test nnz(dB) == 3
@@ -49,13 +43,7 @@ function shared_test_matrix_csr(op, array_type::String)
                 A = sprand(T, 1000, 1000, 0.01)
                 # Convert to CSR storage pattern
                 A_csr = SparseMatrixCSC(transpose(A))
-                dA = DeviceSparseMatrixCSR(
-                    A.m,
-                    A.n,
-                    op(A_csr.colptr),  # rowptr
-                    op(A_csr.rowval),  # colval
-                    op(A_csr.nzval),   # nzval
-                )
+                dA = adapt(op, DeviceSparseMatrixCSR(transpose(A_csr)))
 
                 @test sum(dA) ≈ sum(A)
 
@@ -89,13 +77,7 @@ function shared_test_matrix_csr(op, array_type::String)
 
                     # Convert to CSR storage pattern
                     A_csr = SparseMatrixCSC(transpose(A))
-                    dA = DeviceSparseMatrixCSR(
-                        size(A, 1),
-                        size(A, 2),
-                        op(A_csr.colptr),  # rowptr
-                        op(A_csr.rowval),  # colval
-                        op(A_csr.nzval),   # nzval
-                    )
+                    dA = adapt(op, DeviceSparseMatrixCSR(transpose(A_csr)))
 
                     # Matrix-Scalar multiplication
                     if T != Int32

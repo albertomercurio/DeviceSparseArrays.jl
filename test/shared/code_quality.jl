@@ -7,7 +7,7 @@ end
 
 function shared_test_matrix_csc_quality_basic_linearalgebra(op, T; kwargs...)
     A = sprand(T, 1000, 1000, 0.01)
-    dA = DeviceSparseMatrixCSC(A.m, A.n, op(getcolptr(A)), op(rowvals(A)), op(nonzeros(A)))
+    dA = adapt(op, DeviceSparseMatrixCSC(A))
 
     sum(dA)
 
@@ -36,13 +36,7 @@ function shared_test_matrix_csc_quality_spmv_spmm(op, T; kwargs...)
     B = rand(T, dims_B...)
     b = rand(T, 80)
 
-    dA = DeviceSparseMatrixCSC(
-        size(A, 1),
-        size(A, 2),
-        op(getcolptr(A)),
-        op(rowvals(A)),
-        op(nonzeros(A)),
-    )
+    dA = adapt(op, DeviceSparseMatrixCSC(A))
     dB = op(B)
     db = op(b)
 
@@ -62,13 +56,7 @@ function shared_test_matrix_csr_quality_basic_linearalgebra(op, T; kwargs...)
     A = sprand(T, 1000, 1000, 0.01)
     # Convert to CSR storage pattern
     A_csr = SparseMatrixCSC(transpose(A))
-    dA = DeviceSparseMatrixCSR(
-        A.m,
-        A.n,
-        op(A_csr.colptr),  # rowptr
-        op(A_csr.rowval),  # colval
-        op(A_csr.nzval),   # nzval
-    )
+    dA = adapt(op, DeviceSparseMatrixCSR(transpose(A_csr)))
 
     sum(dA)
 
@@ -99,13 +87,7 @@ function shared_test_matrix_csr_quality_spmv(op, T; kwargs...)
 
     # Convert to CSR storage pattern
     A_csr = SparseMatrixCSC(transpose(A))
-    dA = DeviceSparseMatrixCSR(
-        size(A, 1),
-        size(A, 2),
-        op(getcolptr(A_csr)),
-        op(rowvals(A_csr)),
-        op(nonzeros(A_csr)),
-    )
+    dA = adapt(op, DeviceSparseMatrixCSR(transpose(A_csr)))
     dB = op(B)
     db = op(b)
 
