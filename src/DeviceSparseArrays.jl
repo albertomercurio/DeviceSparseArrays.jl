@@ -11,7 +11,7 @@ import KernelAbstractions
 import KernelAbstractions: @kernel, @atomic, @index, get_backend, synchronize
 using AcceleratedKernels
 
-import Adapt: @adapt_structure
+import Adapt
 
 export AbstractDeviceSparseArray,
     AbstractDeviceSparseVector, AbstractDeviceSparseMatrix, AbstractDeviceSparseVecOrMat
@@ -19,6 +19,7 @@ export AbstractDeviceSparseArray,
 export DeviceSparseVector, DeviceSparseMatrixCSC, DeviceSparseMatrixCSR
 
 include("core.jl")
+include("helpers.jl")
 include("vector.jl")
 include("matrix_csc.jl")
 include("matrix_csr.jl")

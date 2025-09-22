@@ -17,9 +17,9 @@ Fields:
 struct DeviceSparseMatrixCSR{
     Tv,
     Ti<:Integer,
-    RowPtrT<:AbstractVector{Ti},
-    ColValT<:AbstractVector{Ti},
-    NzValT<:AbstractVector{Tv},
+    RowPtrT<:AbstractVector,
+    ColValT<:AbstractVector,
+    NzValT<:AbstractVector,
 } <: AbstractDeviceSparseMatrix{Tv,Ti}
     m::Int
     n::Int
@@ -35,9 +35,9 @@ struct DeviceSparseMatrixCSR{
     ) where {
         Tv,
         Ti<:Integer,
-        RowPtrT<:AbstractVector{Ti},
-        ColValT<:AbstractVector{Ti},
-        NzValT<:AbstractVector{Tv},
+        RowPtrT<:AbstractVector,
+        ColValT<:AbstractVector,
+        NzValT<:AbstractVector,
     }
         get_backend(rowptr) == get_backend(colval) == get_backend(nzval) ||
             throw(ArgumentError("All storage vectors must be on the same device/backend."))
@@ -46,6 +46,10 @@ struct DeviceSparseMatrixCSR{
         n >= 0 || throw(ArgumentError("n must be non-negative"))
         SparseArrays.sparse_check_Ti(m, n, Ti)
         # SparseArrays.sparse_check(m, rowptr, colval, nzval) # TODO: this uses scalar indexing
+
+        _check_type(Ti, rowptr) || throw(ArgumentError("rowptr must be of type $Ti"))
+        _check_type(Ti, colval) || throw(ArgumentError("colval must be of type $Ti"))
+        _check_type(Tv, nzval) || throw(ArgumentError("nzval must be of type $Tv"))
 
         length(rowptr) == m + 1 || throw(ArgumentError("rowptr length must be m+1"))
         length(colval) == length(nzval) ||
@@ -66,7 +70,9 @@ function DeviceSparseMatrixCSR(
     ColValT<:AbstractVector{Ti},
     NzValT<:AbstractVector{Tv},
 } where {Ti<:Integer,Tv}
-    DeviceSparseMatrixCSR{Tv,Ti,RowPtrT,ColValT,NzValT}(m, n, rowptr, colval, nzval)
+    Ti2 = _get_eltype(rowptr)
+    Tv2 = _get_eltype(nzval)
+    DeviceSparseMatrixCSR{Tv2,Ti2,RowPtrT,ColValT,NzValT}(m, n, rowptr, colval, nzval)
 end
 
 function DeviceSparseMatrixCSR(A::Transpose{Tv,<:SparseMatrixCSC}) where {Tv}
@@ -89,7 +95,13 @@ function SparseMatrixCSC(A::DeviceSparseMatrixCSR)
     return SparseMatrixCSC(transpose(At_csc))
 end
 
-@adapt_structure DeviceSparseMatrixCSR
+Adapt.adapt_structure(to, A::DeviceSparseMatrixCSR) = DeviceSparseMatrixCSR(
+    A.m,
+    A.n,
+    Adapt.adapt_structure(to, A.rowptr),
+    Adapt.adapt_structure(to, A.colval),
+    Adapt.adapt_structure(to, A.nzval),
+)
 
 Base.size(A::DeviceSparseMatrixCSR) = (A.m, A.n)
 Base.length(A::DeviceSparseMatrixCSR) = A.m * A.n
@@ -152,7 +164,7 @@ for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers(:DeviceSparseMatrixCSR)
 
         indB = transb ? (i, j) -> :(($j, $i)) : (i, j) -> :(($i, $j)) # transpose indices
 
-        @eval function LinearAlgebra.mul!(
+        @eval function sp_mm!(
             C::$TypeC,
             A::$TypeA,
             B::$TypeB,
@@ -175,9 +187,9 @@ for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers(:DeviceSparseMatrixCSR)
                 ),
             )
 
-            promote_type(T2, T3, eltype(α), eltype(β)) <: T1 || throw(
+            promote_type(T1, T2, eltype(α), eltype(β)) <: T3 || throw(
                 ArgumentError(
-                    "element types of B, C, α, and β must be promotable to the element type of A",
+                    "element types of A, B, α, and β must be promotable to the element type of C",
                 ),
             )
 

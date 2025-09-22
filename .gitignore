@@ -5,4 +5,4 @@
 /docs/Manifest*.toml
 /docs/build/
 /test/Manifest*.toml
-/test/cuda/Manifest*.toml
+/test/*/Manifest*.toml
