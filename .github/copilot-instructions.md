@@ -18,6 +18,7 @@ These guidelines give AI coding agents the minimum project-specific context to b
 - Build docs locally: `make docs`.
 - Doctests: Any code block in docstrings marked for execution must pass CI doctest phase.
 - Format code: `make format`.
+- Always check in which directory you are running commands. Change directory to the repo root if needed.
 
 ## 4. Coding Conventions
 - Public API: add docstrings starting with a concise one-line summary, then details (Documenter picks them up).

@@ -111,8 +111,11 @@ function LinearAlgebra.normalize(V::DeviceSparseVector, p::Real = 2)
 end
 
 function LinearAlgebra.dot(x::DeviceSparseVector, y::DenseVector)
-    length(x) == length(y) ||
-        throw(DimensionMismatch("Vector x has a length $(length(x)) but y has a length $n"))
+    length(x) == length(y) || throw(
+        DimensionMismatch(
+            "Vector x has a length $(length(x)) but y has a length $(length(y))",
+        ),
+    )
 
     T = Base.promote_eltype(x, y)
 
@@ -161,19 +164,6 @@ function _prep_sparsevec_copy_dest!(A::DeviceSparseVector, lB, nnzB)
         resize!(nonzeros(A), nnzB)
         resize!(nonzeroinds(A), nnzB)
     else
-        nnzA = nnz(A)
-
-        lastmodindA = searchsortedlast(nonzeroinds(A), lB)
-        if lastmodindA >= nnzB
-            # A will have fewer non-zero elements; unmodified elements are kept at the end.
-            deleteat!(nonzeroinds(A), (nnzB+1):lastmodindA)
-            deleteat!(nonzeros(A), (nnzB+1):lastmodindA)
-        else
-            # A will have more non-zero elements; unmodified elements are kept at the end.
-            resize!(nonzeroinds(A), nnzB + nnzA - lastmodindA)
-            resize!(nonzeros(A), nnzB + nnzA - lastmodindA)
-            copyto!(nonzeroinds(A), nnzB+1, nonzeroinds(A), lastmodindA+1, nnzA-lastmodindA)
-            copyto!(nonzeros(A), nnzB+1, nonzeros(A), lastmodindA+1, nnzA-lastmodindA)
-        end
+        throw(ArgumentError("Cannot copy to a sparse vector of different length"))
     end
 end
