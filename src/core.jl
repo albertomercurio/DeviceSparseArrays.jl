@@ -31,6 +31,11 @@ function LinearAlgebra.rdiv!(A::AbstractDeviceSparseArray, x::Number)
     return A
 end
 
+Base.:+(A::AbstractDeviceSparseArray) = copy(A)
+
+Base.:*(A::AbstractDeviceSparseArray, J::UniformScaling) = A * J.λ
+Base.:*(J::UniformScaling, A::AbstractDeviceSparseArray) = J.λ * A
+
 SparseArrays.getnzval(A::AbstractDeviceSparseArray) = nonzeros(A)
 function SparseArrays.nnz(A::AbstractDeviceSparseArray)
     length(nonzeros(A))

@@ -95,11 +95,44 @@ Base.copy(A::DeviceSparseMatrixCSC) =
 
 Base.collect(A::DeviceSparseMatrixCSC) = collect(SparseMatrixCSC(A))
 
+function Base.zero(A::DeviceSparseMatrixCSC)
+    colptr = similar(A.colptr)
+    rowval = similar(A.rowval, 0)
+    nzval = similar(A.nzval, 0)
+    fill!(colptr, one(eltype(colptr)))
+    return DeviceSparseMatrixCSC(A.m, A.n, colptr, rowval, nzval)
+end
+
 function Base.:(*)(α::Number, A::DeviceSparseMatrixCSC)
-    return DeviceSparseMatrixCSC(A.m, A.n, getcolptr(A), rowvals(A), α .* nonzeros(A))
+    return DeviceSparseMatrixCSC(
+        A.m,
+        A.n,
+        copy(getcolptr(A)),
+        copy(rowvals(A)),
+        α .* nonzeros(A),
+    )
 end
 Base.:(*)(A::DeviceSparseMatrixCSC, α::Number) = α * A
-Base.:(/)(A::DeviceSparseMatrixCSC, α::Number) = (1 / α) * A # rdiv!(copy(A), α) (not supported on JLArray)
+Base.:(/)(A::DeviceSparseMatrixCSC, α::Number) = (1 / α) * A
+
+function Base.:-(A::DeviceSparseMatrixCSC)
+    return DeviceSparseMatrixCSC(A.m, A.n, copy(A.colptr), copy(A.rowval), -A.nzval)
+end
+
+Base.conj(A::DeviceSparseMatrixCSC{<:Real}) = A
+function Base.conj(A::DeviceSparseMatrixCSC{<:Complex})
+    return DeviceSparseMatrixCSC(A.m, A.n, copy(A.colptr), copy(A.rowval), conj.(A.nzval))
+end
+
+Base.real(A::DeviceSparseMatrixCSC{<:Real}) = A
+function Base.real(A::DeviceSparseMatrixCSC{<:Complex})
+    return DeviceSparseMatrixCSC(A.m, A.n, copy(A.colptr), copy(A.rowval), real.(A.nzval))
+end
+
+Base.imag(A::DeviceSparseMatrixCSC{<:Real}) = zero(A)
+function Base.imag(A::DeviceSparseMatrixCSC{<:Complex})
+    return DeviceSparseMatrixCSC(A.m, A.n, copy(A.colptr), copy(A.rowval), imag.(A.nzval))
+end
 
 SparseArrays.nonzeros(A::DeviceSparseMatrixCSC) = A.nzval
 SparseArrays.getcolptr(A::DeviceSparseMatrixCSC) = A.colptr

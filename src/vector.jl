@@ -62,7 +62,53 @@ Base.length(V::DeviceSparseVector) = V.n
 Base.size(V::DeviceSparseVector) = (V.n,)
 SparseArrays.nonzeros(V::DeviceSparseVector) = V.nzval
 SparseArrays.nonzeroinds(V::DeviceSparseVector) = V.nzind
+
 Base.copy(V::DeviceSparseVector) = DeviceSparseVector(V.n, copy(V.nzind), copy(V.nzval))
+function Base.copyto!(dest::DeviceSparseVector, src::DeviceSparseVector)
+    _prep_sparsevec_copy_dest!(dest, length(src), nnz(src))
+    copyto!(nonzeroinds(dest), 1, nonzeroinds(src), 1, nnz(src))
+    copyto!(nonzeros(dest), 1, nonzeros(src), 1, nnz(src))
+    return dest
+end
+
+Base.similar(V::DeviceSparseVector, ::Type{Tv2}) where {Tv2} =
+    DeviceSparseVector(V.n, copy(V.nzind), similar(V.nzval, Tv2))
+
+function Base.:(*)(α::Number, V::DeviceSparseVector)
+    return DeviceSparseVector(V.n, copy(V.nzind), α .* V.nzval)
+end
+Base.:(*)(V::DeviceSparseVector, α::Number) = α * V
+Base.:(/)(V::DeviceSparseVector, α::Number) = (1 / α) * V
+
+function Base.:-(V::DeviceSparseVector)
+    return DeviceSparseVector(V.n, copy(V.nzind), -V.nzval)
+end
+
+Base.conj(V::DeviceSparseVector{<:Real}) = V
+function Base.conj(V::DeviceSparseVector{<:Complex})
+    return DeviceSparseVector(V.n, copy(V.nzind), conj.(V.nzval))
+end
+
+Base.real(V::DeviceSparseVector{<:Real}) = V
+function Base.real(V::DeviceSparseVector{<:Complex})
+    return DeviceSparseVector(V.n, copy(V.nzind), real.(V.nzval))
+end
+
+Base.imag(V::DeviceSparseVector{<:Real}) = zero(V)
+function Base.imag(V::DeviceSparseVector{<:Complex})
+    return DeviceSparseVector(V.n, copy(V.nzind), imag.(V.nzval))
+end
+
+function LinearAlgebra.norm(V::DeviceSparseVector, p::Real = 2)
+    return norm(nonzeros(V), p)
+end
+
+# TODO: Remove this method when the function in LinearAlgebra is fixed
+function LinearAlgebra.normalize(V::DeviceSparseVector, p::Real = 2)
+    nrm = norm(V, p)
+    V2 = copymutable_oftype(V, float(Base.promote_eltype(V, nrm)))
+    return __normalize!(V2, nrm)
+end
 
 function LinearAlgebra.dot(x::DeviceSparseVector, y::DenseVector)
     length(x) == length(y) ||
@@ -105,3 +151,29 @@ LinearAlgebra.dot(
     x::DenseVector{T1},
     y::DeviceSparseVector{Tv},
 ) where {T1<:Complex,Tv<:Complex} = conj(dot(y, x))
+
+# Copied from SparseArrays.jl
+function _prep_sparsevec_copy_dest!(A::DeviceSparseVector, lB, nnzB)
+    lA = length(A)
+    lA >= lB || throw(BoundsError())
+    # If the two vectors have the same length then all the elements in A will be overwritten.
+    if length(A) == lB
+        resize!(nonzeros(A), nnzB)
+        resize!(nonzeroinds(A), nnzB)
+    else
+        nnzA = nnz(A)
+
+        lastmodindA = searchsortedlast(nonzeroinds(A), lB)
+        if lastmodindA >= nnzB
+            # A will have fewer non-zero elements; unmodified elements are kept at the end.
+            deleteat!(nonzeroinds(A), (nnzB+1):lastmodindA)
+            deleteat!(nonzeros(A), (nnzB+1):lastmodindA)
+        else
+            # A will have more non-zero elements; unmodified elements are kept at the end.
+            resize!(nonzeroinds(A), nnzB + nnzA - lastmodindA)
+            resize!(nonzeros(A), nnzB + nnzA - lastmodindA)
+            copyto!(nonzeroinds(A), nnzB+1, nonzeroinds(A), lastmodindA+1, nnzA-lastmodindA)
+            copyto!(nonzeros(A), nnzB+1, nonzeros(A), lastmodindA+1, nnzA-lastmodindA)
+        end
+    end
+end
