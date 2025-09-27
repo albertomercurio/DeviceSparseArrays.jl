@@ -9,6 +9,8 @@
 DeviceSparseArrays.jl is a Julia package that provides backend-agnostic sparse array types and operations for CPU, GPU, and other accelerators. It aims to offer a unified interface for sparse data structures that can seamlessly operate across different hardware backends. For example, a `DeviceSparseMatrixCSC` type could represent a sparse matrix stored in Compressed Sparse Column format, where the underlying data could reside in CPU, GPU, or any other memory type, dispatching specific implementations based on the target device. This allows users to write code that is portable and efficient across various hardware platforms without needing to change their code for different backends. The aim of the package is to support a wide range of different sparse formats (e.g., CSC, CSR, COO) as well as different backends like:
 - CPU (using standard Julia arrays)
 - GPU (using [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl), [AMDGPU.jl](https://github.com/JuliaGPU/AMDGPU.jl), [oneAPI.jl](https://github.com/JuliaGPU/oneAPI.jl), [Metal.jl](https://github.com/JuliaGPU/Metal.jl), etc.)
+- [DistributedArrays.jl](https://github.com/JuliaParallel/DistributedArrays.jl) (for distributed computing)
+- [Dagger.jl](https://github.com/JuliaParallel/Dagger.jl) (for task parallelism)
 - [Reactant.jl](https://github.com/EnzymeAD/Reactant.jl) (for XLA acceleration)
 - [StaticArrays.jl](https://github.com/JuliaArrays/StaticArrays.jl) (for small, stack-allocated arrays)
 - [FixedSizeArrays.jl](https://github.com/JuliaArrays/FixedSizeArrays.jl) (for arrays with statically known sizes)
