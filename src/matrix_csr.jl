@@ -187,9 +187,8 @@ function LinearAlgebra.tr(A::DeviceSparseMatrixCSR)
 end
 
 # Matrix-Vector and Matrix-Matrix multiplication
-for (wrapa, transa, opa, unwrapa, type_constraint) in
-    trans_adj_wrappers(:DeviceSparseMatrixCSR)
-    for (wrapb, transb, opb, unwrapb, _) in trans_adj_wrappers(:DenseVecOrMat)
+for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCSR)
+    for (wrapb, transb, opb, unwrapb, whereT2) in trans_adj_wrappers(:DenseVecOrMat)
         TypeA = wrapa(:(T1))
         TypeB = wrapb(:(T2))
         TypeC = :(DenseVecOrMat{T3})
@@ -204,7 +203,7 @@ for (wrapa, transa, opa, unwrapa, type_constraint) in
             B::$TypeB,
             α::Number,
             β::Number,
-        ) where {T1,T2,T3}
+        ) where {$(whereT1(:T1)),$(whereT2(:T2)),T3}
             size(A, 2) == size(B, 1) || throw(
                 DimensionMismatch(
                     "second dimension of A, $(size(A,2)), does not match the first dimension of B, $(size(B,1))",
@@ -289,8 +288,7 @@ for (wrapa, transa, opa, unwrapa, type_constraint) in
 end
 
 # Three-argument dot product: dot(x, A, y) = x' * A * y
-for (wrapa, transa, opa, unwrapa, type_constraint) in
-    trans_adj_wrappers(:DeviceSparseMatrixCSR)
+for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCSR)
     TypeA = wrapa(:(T1))
     kernel_dot! = transa ? :kernel_dot_T! : :kernel_dot_N!
 
@@ -298,7 +296,7 @@ for (wrapa, transa, opa, unwrapa, type_constraint) in
         x::AbstractVector{T2},
         A::$TypeA,
         y::AbstractVector{T3},
-    ) where {$type_constraint,T2,T3}
+    ) where {$(whereT1(:T1)),T2,T3}
         size(A, 1) == length(x) || throw(
             DimensionMismatch(
                 "first dimension of A, $(size(A,1)), does not match the length of x, $(length(x))",
