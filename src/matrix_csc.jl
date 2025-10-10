@@ -7,12 +7,12 @@ Compressed Sparse Column (CSC) matrix with generic storage vectors for column
 pointer, row indices, and nonzero values. Buffer types (e.g. `Vector`, GPU array
 types) enable dispatch on device characteristics.
 
-Fields:
-  m::Int               - number of rows
-  n::Int               - number of columns
-  colptr::ColPtrT      - column pointer array (length n+1)
-  rowval::RowValT      - row indices of stored entries
-  nzval::NzValT        - stored values
+# Fields
+- `m::Int`               - number of rows
+- `n::Int`               - number of columns
+- `colptr::ColPtrT`      - column pointer array (length n+1)
+- `rowval::RowValT`      - row indices of stored entries
+- `nzval::NzValT`        - stored values
 """
 struct DeviceSparseMatrixCSC{
     Tv,

@@ -16,6 +16,7 @@ AbstractDeviceSparseArray
 DeviceSparseVector
 DeviceSparseMatrixCSC
 DeviceSparseMatrixCSR
+DeviceSparseMatrixCOO
 ```
 
 ## Functions

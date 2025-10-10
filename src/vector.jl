@@ -6,10 +6,10 @@
 Sparse vector with generic index and value storage containers which may reside
 on different devices. The logical length is stored along with index/value buffers.
 
-Fields:
-  n::Ti          - logical length of the vector
-  nzind::IndT    - indices of stored (typically nonzero) entries (1-based)
-  nzval::ValT    - stored values
+# Fields
+- `n::Ti`          - logical length of the vector
+- `nzind::IndT`    - indices of stored (typically nonzero) entries (1-based)
+- `nzval::ValT`    - stored values
 
 Constructors validate that the index and value vectors have matching length.
 """

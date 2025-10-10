@@ -7,12 +7,12 @@ Compressed Sparse Row (CSR) matrix with generic storage vectors for row
 pointer, column indices, and nonzero values. Buffer types (e.g. `Vector`, GPU array
 types) enable dispatch on device characteristics.
 
-Fields:
-  m::Int               - number of rows
-  n::Int               - number of columns
-  rowptr::RowPtrT      - row pointer array (length m+1)
-  colval::ColValT      - column indices of stored entries
-  nzval::NzValT        - stored values
+# Fields
+- `m::Int`               - number of rows
+- `n::Int`               - number of columns
+- `rowptr::RowPtrT`      - row pointer array (length m+1)
+- `colval::ColValT`      - column indices of stored entries
+- `nzval::NzValT`        - stored values
 """
 struct DeviceSparseMatrixCSR{
     Tv,

@@ -7,12 +7,12 @@ Coordinate (COO) sparse matrix with generic storage vectors for row indices,
 column indices, and nonzero values. Buffer types (e.g. `Vector`, GPU array
 types) enable dispatch on device characteristics.
 
-Fields:
-  m::Int               - number of rows
-  n::Int               - number of columns
-  rowind::RowIndT      - row indices of stored entries
-  colind::ColIndT      - column indices of stored entries
-  nzval::NzValT        - stored values
+# Fields
+- `m::Int`               - number of rows
+- `n::Int`               - number of columns
+- `rowind::RowIndT`      - row indices of stored entries
+- `colind::ColIndT`      - column indices of stored entries
+- `nzval::NzValT`        - stored values
 """
 struct DeviceSparseMatrixCOO{
     Tv,
