@@ -13,6 +13,7 @@ using DeviceSparseArrays: getrowptr, colvals
 include(joinpath(@__DIR__, "shared", "vector.jl"))
 include(joinpath(@__DIR__, "shared", "matrix_csc.jl"))
 include(joinpath(@__DIR__, "shared", "matrix_csr.jl"))
+include(joinpath(@__DIR__, "shared", "matrix_coo.jl"))
 
 const cpu_backend_names = ("Base Array", "JLArray")
 const cpu_backend_funcs = (Array, JLArray)
@@ -23,6 +24,7 @@ const cpu_backend_funcs = (Array, JLArray)
             shared_test_vector(func, name)
             shared_test_matrix_csc(func, name)
             shared_test_matrix_csr(func, name)
+            shared_test_matrix_coo(func, name)
         end
     end
 end
@@ -67,6 +69,18 @@ end
                 op_A = identity,
                 op_B = adjoint,
             )
+            @test_opt target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_matrix_coo_quality(
+                func,
+                Float64;
+                op_A = identity,
+                op_B = identity,
+            )
+            @test_opt target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_matrix_coo_quality(
+                func,
+                Float64;
+                op_A = transpose,
+                op_B = adjoint,
+            )
 
             @test_call target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_vector_quality(
                 func,
@@ -94,6 +108,18 @@ end
                 func,
                 Float64;
                 op_A = identity,
+                op_B = adjoint,
+            )
+            @test_call target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_matrix_coo_quality(
+                func,
+                Float64;
+                op_A = identity,
+                op_B = identity,
+            )
+            @test_call target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_matrix_coo_quality(
+                func,
+                Float64;
+                op_A = transpose,
                 op_B = adjoint,
             )
         end

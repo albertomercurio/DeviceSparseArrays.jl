@@ -495,3 +495,168 @@ function shared_test_matrix_csr_quality_uniformscaling(op, T; kwargs...)
 
     return nothing
 end
+
+function shared_test_matrix_coo_quality(op, T; kwargs...)
+    shared_test_matrix_coo_quality_conversion(op, T; kwargs...)
+    shared_test_matrix_coo_quality_basic_linearalgebra(op, T; kwargs...)
+    shared_test_matrix_coo_quality_scalar_operations(op, T; kwargs...)
+    shared_test_matrix_coo_quality_unary_operations(op, T; kwargs...)
+    shared_test_matrix_coo_quality_uniformscaling(op, T; kwargs...)
+    shared_test_matrix_coo_quality_spmv(op, T; kwargs...)
+end
+
+function shared_test_matrix_coo_quality_conversion(op, T; kwargs...)
+    A = spzeros(T, 0, 0)
+    rows = [1, 2, 1]
+    cols = [1, 1, 2]
+    vals = T.([1.0, 2.0, 3.0])
+    B = sparse(rows, cols, vals, 2, 2)
+
+    # Test COO conversion
+    dB = adapt(op, DeviceSparseMatrixCOO(B))
+    size(dB)
+    length(dB)
+    nnz(dB)
+    collect(nonzeros(dB))
+    SparseMatrixCSC(dB)
+
+    return nothing
+end
+
+function shared_test_matrix_coo_quality_basic_linearalgebra(op, T; kwargs...)
+    A = sprand(T, 1000, 1000, 0.01)
+    dA = adapt(op, DeviceSparseMatrixCOO(A))
+
+    sum(dA)
+
+    if T in (ComplexF32, ComplexF64)
+        # The kernel functions may use @atomic for COO matrices, which does not support Complex types in JLArray
+        return nothing
+    end
+
+    tr(dA)
+
+    return nothing
+end
+
+function shared_test_matrix_coo_quality_spmv(op, T; kwargs...)
+    op_A = kwargs[:op_A]
+    op_B = kwargs[:op_B]
+
+    if T in (ComplexF32, ComplexF64)
+        # The mul! function uses @atomic for COO matrices, which does not support Complex types
+        return nothing
+    end
+    dims_A = op_A === identity ? (100, 80) : (80, 100)
+    dims_B = op_B === identity ? (80, 50) : (50, 80)
+
+    A = sprand(T, dims_A..., 0.1)
+    B = rand(T, dims_B...)
+    b = rand(T, 80)
+
+    dA = adapt(op, DeviceSparseMatrixCOO(A))
+    dB = op(B)
+    db = op(b)
+
+    # Matrix-Vector and Matrix-Matrix multiplication
+    op_A(dA) * db
+    op_A(dA) * op_B(dB)
+
+    return nothing
+end
+
+function shared_test_matrix_coo_quality_scalar_operations(op, T; kwargs...)
+    A = sprand(T, 45, 35, 0.1)
+    dA = adapt(op, DeviceSparseMatrixCOO(A))
+
+    α = T <: Complex ? T(2.0 + 1.5im) : (T <: Integer ? T(2) : T(1.8))
+
+    # Test scalar multiplication
+    scaled_left = α * dA
+    scaled_right = dA * α
+    nnz(scaled_left)
+    nnz(scaled_right)
+    collect(nonzeros(scaled_left))
+    collect(nonzeros(scaled_right))
+
+    # Test scalar division
+    if !(T <: Integer)  # Skip division for integer types
+        divided = dA / α
+        nnz(divided)
+        collect(nonzeros(divided))
+    end
+
+    return nothing
+end
+
+function shared_test_matrix_coo_quality_unary_operations(op, T; kwargs...)
+    if !(T <: Union{Float32,Float64,ComplexF32,ComplexF64})
+        return nothing
+    end
+
+    A = sprand(T, 28, 22, 0.15)
+    dA = adapt(op, DeviceSparseMatrixCOO(A))
+
+    # Test unary plus
+    pos_A = +dA
+    nnz(pos_A)
+    collect(nonzeros(pos_A))
+
+    # Test unary minus
+    neg_A = -dA
+    nnz(neg_A)
+    collect(nonzeros(neg_A))
+
+    # Test complex operations
+    if T <: Complex
+        conj_A = conj(dA)
+        real_A = real(dA)
+        imag_A = imag(dA)
+
+        nnz(conj_A)
+        eltype(conj_A)
+        collect(nonzeros(conj_A))
+
+        eltype(real_A)
+        collect(nonzeros(real_A))
+
+        eltype(imag_A)
+        collect(nonzeros(imag_A))
+    else
+        # For real types
+        conj_A = conj(dA)
+        real_A = real(dA)
+        imag_A = imag(dA)
+
+        nnz(imag_A)
+    end
+
+    return nothing
+end
+
+function shared_test_matrix_coo_quality_uniformscaling(op, T; kwargs...)
+    if !(T <: Union{Float32,Float64,ComplexF32,ComplexF64})
+        return nothing
+    end
+
+    A = sprand(T, 18, 18, 0.2)
+    dA = adapt(op, DeviceSparseMatrixCOO(A))
+
+    # Test A * I (identity)
+    result_I = dA * I
+    nnz(result_I)
+    collect(nonzeros(result_I))
+
+    # Test I * A (identity)
+    result_I2 = I * dA
+    nnz(result_I2)
+    collect(nonzeros(result_I2))
+
+    # Test with scaled identity
+    α = T <: Complex ? T(1.5 - 0.8im) : T(2.2)
+    result_αI = dA * (α * I)
+    nnz(result_αI)
+    collect(nonzeros(result_αI))
+
+    return nothing
+end
