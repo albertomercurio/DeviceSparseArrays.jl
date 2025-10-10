@@ -187,8 +187,9 @@ function LinearAlgebra.tr(A::DeviceSparseMatrixCOO)
 end
 
 # Matrix-Vector and Matrix-Matrix multiplication
-for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers(:DeviceSparseMatrixCOO)
-    for (wrapb, transb, opb, unwrapb) in trans_adj_wrappers(:DenseVecOrMat)
+for (wrapa, transa, opa, unwrapa, type_constraint) in
+    trans_adj_wrappers(:DeviceSparseMatrixCOO)
+    for (wrapb, transb, opb, unwrapb, _) in trans_adj_wrappers(:DenseVecOrMat)
         TypeA = wrapa(:(T1))
         TypeB = wrapb(:(T2))
         TypeC = :(DenseVecOrMat{T3})
@@ -286,5 +287,89 @@ for (wrapa, transa, opa, unwrapa) in trans_adj_wrappers(:DeviceSparseMatrixCOO)
 
             return C
         end
+    end
+end
+
+# Three-argument dot product: dot(x, A, y) = x' * A * y
+for (wrapa, transa, opa, unwrapa, type_constraint) in
+    trans_adj_wrappers(:DeviceSparseMatrixCOO)
+    TypeA = wrapa(:(T1))
+    kernel_dot! = transa ? :kernel_dot_T! : :kernel_dot_N!
+
+    @eval function LinearAlgebra.dot(
+        x::AbstractVector{T2},
+        A::$TypeA,
+        y::AbstractVector{T3},
+    ) where {$type_constraint,T2,T3}
+        size(A, 1) == length(x) || throw(
+            DimensionMismatch(
+                "first dimension of A, $(size(A,1)), does not match the length of x, $(length(x))",
+            ),
+        )
+        size(A, 2) == length(y) || throw(
+            DimensionMismatch(
+                "second dimension of A, $(size(A,2)), does not match the length of y, $(length(y))",
+            ),
+        )
+
+        _A = $(unwrapa(:A))
+
+        backend_x = get_backend(x)
+        backend_A = get_backend(_A)
+        backend_y = get_backend(y)
+
+        backend_x == backend_A == backend_y ||
+            throw(ArgumentError("All arrays must have the same backend"))
+
+        T = promote_type(T1, T2, T3)
+
+        backend = backend_A
+
+        # TODO: For CPU backend, compute directly without @atomic to support Complex types
+        # backend isa KernelAbstractions.CPU && return sum(...)
+
+        @kernel function kernel_dot_N!(
+            res,
+            @Const(x),
+            @Const(rowind),
+            @Const(colind),
+            @Const(nzval),
+            @Const(y)
+        )
+            i = @index(Global)
+
+            @inbounds begin
+                row = rowind[i]
+                col = colind[i]
+                local_sum = dot(x[row], $(opa(:(nzval[i]))), y[col])
+                @atomic res[1] += local_sum
+            end
+        end
+
+        @kernel function kernel_dot_T!(
+            res,
+            @Const(x),
+            @Const(rowind),
+            @Const(colind),
+            @Const(nzval),
+            @Const(y)
+        )
+            i = @index(Global)
+
+            @inbounds begin
+                row = rowind[i]
+                col = colind[i]
+                local_sum = dot(x[col], $(opa(:(nzval[i]))), y[row])
+                @atomic res[1] += local_sum
+            end
+        end
+
+        res = similar(nonzeros(_A), T, 1)
+        fill!(res, zero(T))
+
+        kernel! = $kernel_dot!(backend)
+        kernel!(res, x, getrowind(_A), getcolind(_A), getnzval(_A), y; ndrange = (nnz(_A),))
+
+        return allowed_getindex(res, 1)
     end
 end

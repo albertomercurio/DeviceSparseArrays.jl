@@ -47,7 +47,7 @@ function shared_test_conversion_matrix_coo(op, array_type::String)
 end
 
 function shared_test_linearalgebra_matrix_coo(op, array_type::String)
-    @testset "Dot and Trace" begin
+    @testset "Sum and Trace" begin
         for T in (Int32, Int64, Float32, Float64, ComplexF32, ComplexF64)
             A = sprand(T, 1000, 1000, 0.01)
             dA = adapt(op, DeviceSparseMatrixCOO(A))
@@ -55,11 +55,36 @@ function shared_test_linearalgebra_matrix_coo(op, array_type::String)
             @test sum(dA) ≈ sum(A)
 
             if T in (ComplexF32, ComplexF64)
-                # The kernel functions may use @atomic, which does not support Complex types in JLArray
+                # The kernel functions use @atomic, which does not support Complex types
                 continue
             end
 
             @test tr(dA) ≈ tr(A)
+        end
+    end
+
+    @testset "Three-argument dot" begin
+        for T in (Float32, Float64, ComplexF32, ComplexF64)
+            if T in (ComplexF32, ComplexF64)
+                # The kernel functions use @atomic, which does not support Complex types
+                continue
+            end
+
+            for op_A in (identity, transpose, adjoint)
+                m, n = op_A === identity ? (100, 80) : (80, 100)
+                A = sprand(T, m, n, 0.1)
+                x = rand(T, size(op_A(A), 1))
+                y = rand(T, size(op_A(A), 2))
+
+                dA = adapt(op, DeviceSparseMatrixCOO(A))
+                dx = op(x)
+                dy = op(y)
+
+                result_device = dot(dx, op_A(dA), dy)
+                result_expected = dot(x, op_A(A), y)
+
+                @test result_device ≈ result_expected
+            end
         end
     end
 
