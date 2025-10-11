@@ -18,6 +18,10 @@ docs:
 	${JULIA} --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
 	${JULIA} --project=docs docs/make.jl
 
+benchmark:
+	${JULIA} --project=benchmarks -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+	${JULIA} --project=benchmarks --threads=2 benchmarks/runbenchmarks.jl
+
 vitepress:
 	npm --prefix docs run docs:dev
 
@@ -30,7 +34,8 @@ help:
 	@echo " - make changelog: generate changelog"
 	@echo " - make test: run the tests"
 	@echo " - make docs: instantiate and build the documentation"
+	@echo " - make benchmark: run the benchmarks"
 	@echo " - make vitepress: start Vitepress site of documentation"
 	@echo " - make all: run every commands in the above order"
 
-.PHONY: default setup format changelog test docs vitepress all help
+.PHONY: default setup format changelog test docs benchmark vitepress all help
