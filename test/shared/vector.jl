@@ -1,14 +1,32 @@
-function shared_test_vector(op, array_type::String)
+function shared_test_vector(
+    op,
+    array_type::String,
+    int_types::Tuple,
+    float_types::Tuple,
+    complex_types::Tuple,
+)
     @testset "DeviceSparseVector $array_type" verbose=true begin
-        shared_test_conversion_vector(op, array_type)
-        shared_test_linearalgebra_vector(op, array_type)
+        shared_test_conversion_vector(op, array_type, int_types, float_types, complex_types)
+        shared_test_linearalgebra_vector(
+            op,
+            array_type,
+            int_types,
+            float_types,
+            complex_types,
+        )
     end
 end
 
-function shared_test_conversion_vector(op, array_type::String)
+function shared_test_conversion_vector(
+    op,
+    array_type::String,
+    int_types::Tuple,
+    float_types::Tuple,
+    complex_types::Tuple,
+)
     @testset "Conversion" begin
-        sv = SparseVector(10, Int[], Float64[])
-        sv2 = sparsevec([3], [2.5], 8)
+        sv = SparseVector(10, int_types[end][], float_types[end][])
+        sv2 = sparsevec(int_types[end][3], float_types[end][2.5], 8)
 
         # test only conversion SparseVector <-> DeviceSparseVector
         if op === Array
@@ -22,8 +40,8 @@ function shared_test_conversion_vector(op, array_type::String)
         @test size(dsv) == (10,)
         @test length(dsv) == 10
         @test nnz(dsv) == 0
-        @test collect(nonzeros(dsv)) == Float64[]
-        @test collect(nonzeroinds(dsv)) == Int[]
+        @test collect(nonzeros(dsv)) == float_types[end][]
+        @test collect(nonzeroinds(dsv)) == int_types[end][]
 
         dsv2 = adapt(op, DeviceSparseVector(sv2))
         @test size(dsv2) == (8,)
@@ -35,9 +53,15 @@ function shared_test_conversion_vector(op, array_type::String)
     end
 end
 
-function shared_test_linearalgebra_vector(op, array_type::String)
+function shared_test_linearalgebra_vector(
+    op,
+    array_type::String,
+    int_types::Tuple,
+    float_types::Tuple,
+    complex_types::Tuple,
+)
     @testset "Dot And Sum" begin
-        for T in (Int32, Int64, Float32, Float64, ComplexF32, ComplexF64)
+        for T in (int_types..., float_types..., complex_types...)
             v = sprand(T, 1000, 0.01)
             y = rand(T, 1000)
             dv = adapt(op, DeviceSparseVector(v))
@@ -56,7 +80,7 @@ function shared_test_linearalgebra_vector(op, array_type::String)
     end
 
     @testset "Scalar Operations" begin
-        for T in (Int32, Int64, Float32, Float64, ComplexF32, ComplexF64)
+        for T in (int_types..., float_types..., complex_types...)
             v = sprand(T, 100, 0.3)
             dv = adapt(op, DeviceSparseVector(v))
 
@@ -80,7 +104,7 @@ function shared_test_linearalgebra_vector(op, array_type::String)
     end
 
     @testset "Unary Operations" begin
-        for T in (Float32, Float64, ComplexF32, ComplexF64)
+        for T in (float_types..., complex_types...)
             v = sprand(T, 80, 0.4)
             dv = adapt(op, DeviceSparseVector(v))
 
@@ -123,7 +147,7 @@ function shared_test_linearalgebra_vector(op, array_type::String)
     end
 
     @testset "Norms and Normalization" begin
-        for T in (Float32, Float64, ComplexF32, ComplexF64)
+        for T in (float_types..., complex_types...)
             v = sprand(T, 50, 0.5)
             dv = adapt(op, DeviceSparseVector(v))
 

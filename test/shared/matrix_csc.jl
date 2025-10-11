@@ -1,16 +1,40 @@
-function shared_test_matrix_csc(op, array_type::String)
+function shared_test_matrix_csc(
+    op,
+    array_type::String,
+    int_types::Tuple,
+    float_types::Tuple,
+    complex_types::Tuple,
+)
     @testset "DeviceSparseMatrixCSC $array_type" verbose=true begin
-        shared_test_conversion_matrix_csc(op, array_type)
-        shared_test_linearalgebra_matrix_csc(op, array_type)
+        shared_test_conversion_matrix_csc(
+            op,
+            array_type,
+            int_types,
+            float_types,
+            complex_types,
+        )
+        shared_test_linearalgebra_matrix_csc(
+            op,
+            array_type,
+            int_types,
+            float_types,
+            complex_types,
+        )
     end
 end
 
-function shared_test_conversion_matrix_csc(op, array_type::String)
+function shared_test_conversion_matrix_csc(
+    op,
+    array_type::String,
+    int_types::Tuple,
+    float_types::Tuple,
+    complex_types::Tuple,
+)
     @testset "Conversion" begin
-        A = spzeros(Float32, 0, 0)
-        rows = [1, 2, 1]
-        cols = [1, 1, 2]
-        vals = [1.0, 2.0, 3.0]
+        A = spzeros(float_types[end], 0, 0)
+        rows = int_types[end][1, 2, 1]
+        cols = int_types[end][1, 1, 2]
+        vals = float_types[end][1.0, 2.0, 3.0]
         B = sparse(rows, cols, vals, 2, 2)
 
         # test only conversion SparseMatrixCSC <-> DeviceSparseMatrixCSC
@@ -18,7 +42,7 @@ function shared_test_conversion_matrix_csc(op, array_type::String)
             dA = DeviceSparseMatrixCSC(A)
             @test size(dA) == (0, 0)
             @test length(dA) == 0
-            @test collect(nonzeros(dA)) == Float32[]
+            @test collect(nonzeros(dA)) == float_types[end][]
             @test SparseMatrixCSC(dA) == A
         end
 
@@ -26,7 +50,7 @@ function shared_test_conversion_matrix_csc(op, array_type::String)
         @test size(dA) == (0, 0)
         @test length(dA) == 0
         @test nnz(dA) == 0
-        @test collect(nonzeros(dA)) == Float32[]
+        @test collect(nonzeros(dA)) == float_types[end][]
 
         dB = adapt(op, DeviceSparseMatrixCSC(B))
         @test size(dB) == (2, 2)
@@ -40,16 +64,22 @@ function shared_test_conversion_matrix_csc(op, array_type::String)
         @test_throws ArgumentError DeviceSparseMatrixCSC(
             2,
             2,
-            op([1, 3]),
-            op([1]),
-            op([1.0]),
+            op(int_types[end][1, 3]),
+            op(int_types[end][1]),
+            op(float_types[end][1.0]),
         )
     end
 end
 
-function shared_test_linearalgebra_matrix_csc(op, array_type::String)
+function shared_test_linearalgebra_matrix_csc(
+    op,
+    array_type::String,
+    int_types::Tuple,
+    float_types::Tuple,
+    complex_types::Tuple,
+)
     @testset "Sum and Trace" begin
-        for T in (Int32, Int64, Float32, Float64, ComplexF32, ComplexF64)
+        for T in (int_types..., float_types..., complex_types...)
             A = sprand(T, 1000, 1000, 0.01)
             dA = adapt(op, DeviceSparseMatrixCSC(A))
 
@@ -65,12 +95,10 @@ function shared_test_linearalgebra_matrix_csc(op, array_type::String)
     end
 
     @testset "Three-argument dot" begin
-        for T in (Float32, Float64, ComplexF32, ComplexF64)
-            if T in (ComplexF32, ComplexF64)
-                # The kernel functions use @atomic, which does not support Complex types
-                continue
+        for T in (int_types..., float_types..., complex_types...)
+            if array_type in ("Base Array", "JLArray")
+                continue # CPU arrays do not support kernel reduction
             end
-
             for op_A in (identity, transpose, adjoint)
                 m, n = op_A === identity ? (100, 80) : (80, 100)
                 A = sprand(T, m, n, 0.1)
@@ -90,7 +118,7 @@ function shared_test_linearalgebra_matrix_csc(op, array_type::String)
     end
 
     @testset "Scalar Operations" begin
-        for T in (Int32, Int64, Float32, Float64, ComplexF32, ComplexF64)
+        for T in (int_types..., float_types..., complex_types...)
             A = sprand(T, 50, 40, 0.1)
             dA = adapt(op, DeviceSparseMatrixCSC(A))
 
@@ -114,7 +142,7 @@ function shared_test_linearalgebra_matrix_csc(op, array_type::String)
     end
 
     @testset "Unary Operations" begin
-        for T in (Float32, Float64, ComplexF32, ComplexF64)
+        for T in (float_types..., complex_types...)
             A = sprand(T, 30, 25, 0.15)
             dA = adapt(op, DeviceSparseMatrixCSC(A))
 
@@ -157,7 +185,7 @@ function shared_test_linearalgebra_matrix_csc(op, array_type::String)
     end
 
     @testset "UniformScaling Multiplication" begin
-        for T in (Float32, Float64, ComplexF32, ComplexF64)
+        for T in (float_types..., complex_types...)
             A = sprand(T, 20, 20, 0.2)
             dA = adapt(op, DeviceSparseMatrixCSC(A))
 
@@ -180,7 +208,7 @@ function shared_test_linearalgebra_matrix_csc(op, array_type::String)
     end
 
     @testset "Matrix-Scalar, Matrix-Vector and Matrix-Matrix multiplication" begin
-        for T in (Int32, Int64, Float64, ComplexF32, ComplexF64)
+        for T in (int_types..., float_types..., complex_types...)
             for (op_A, op_B) in Iterators.product(
                 (identity, transpose, adjoint),
                 (identity, transpose, adjoint),
@@ -204,7 +232,7 @@ function shared_test_linearalgebra_matrix_csc(op, array_type::String)
                 if T != Int32
                     @test collect(2 * dA) ≈ 2 * collect(A)
                     @test collect(dA * 2) ≈ collect(A * 2)
-                    @test collect(dA / 2) ≈ collect(A / 2)
+                    @test collect(dA) / 2 ≈ collect(A) / 2
                 end
 
                 # Matrix-Vector multiplication
