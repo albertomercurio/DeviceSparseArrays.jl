@@ -36,7 +36,7 @@ jobs:
           - os: 'macOS-latest'
             arch: 'arm64'
         group:
-          - 'Core'
+          - 'CPU'
         arch:
           - x64
         include:
