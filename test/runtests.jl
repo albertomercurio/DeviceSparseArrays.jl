@@ -43,8 +43,20 @@ if GROUP in ("All", "CPU")
                     (Float32, Float64),
                     (ComplexF32, ComplexF64),
                 )
-                shared_test_matrix_csr(func, name)
-                shared_test_matrix_coo(func, name)
+                shared_test_matrix_csr(
+                    func,
+                    name,
+                    (Int32, Int64),
+                    (Float32, Float64),
+                    (ComplexF32, ComplexF64),
+                )
+                shared_test_matrix_coo(
+                    func,
+                    name,
+                    (Int32, Int64),
+                    (Float32, Float64),
+                    (ComplexF32, ComplexF64),
+                )
             end
         end
     end

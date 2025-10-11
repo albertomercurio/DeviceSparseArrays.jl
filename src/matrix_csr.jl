@@ -319,61 +319,77 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
 
         T = promote_type(T1, T2, T3)
 
+        m = size(_A, 1)
+        rowptr = getrowptr(_A)
+        colval = getcolval(_A)
+        nzval = getnzval(_A)
+
         backend = backend_A
 
-        # TODO: For CPU backend, compute directly without @atomic to support Complex types
-        # backend isa KernelAbstractions.CPU && return sum(...)
-
-        @kernel function kernel_dot_N!(
-            res,
+        # Use a workgroup-based reduction kernel
+        # Each work-item processes multiple rows with a stride, then reduces within workgroup
+        @kernel inbounds=true unsafe_indices=true function kernel_workgroup_dot!(
+            block_results,
             @Const(x),
             @Const(rowptr),
             @Const(colval),
             @Const(nzval),
-            @Const(y)
+            @Const(y),
+            @Const(m)
         )
-            row = @index(Global)
+            # Get work-item and workgroup indices
+            local_id = @index(Local, Linear)
+            group_id = @index(Group, Linear)
+            global_id = @index(Global, Linear)
 
-            local_sum = zero(eltype(res))
-            @inbounds for j = rowptr[row]:(rowptr[row+1]-1)
-                local_sum += dot(x[row], $(opa(:(nzval[j]))), y[colval[j]])
+            workgroup_size = @uniform @groupsize()[1]
+            stride = @uniform @ndrange()[1]
+
+            # Allocate shared memory for workgroup reduction
+            shared = @localmem(eltype(block_results), workgroup_size)
+
+            # Each work-item accumulates its contribution from rows with stride
+            local_sum = zero(eltype(block_results))
+            for row = global_id:stride:m
+                for j = rowptr[row]:(rowptr[row+1]-1)
+                    local_sum += $(
+                        transa ? :(dot(x[colval[j]], $(opa(:(nzval[j]))), y[row])) :
+                        :(dot(x[row], $(opa(:(nzval[j]))), y[colval[j]]))
+                    )
+                end
             end
 
-            @atomic res[1] += local_sum
-        end
+            # Store local sum in shared memory
+            shared[local_id] = local_sum
+            @synchronize()
 
-        @kernel function kernel_dot_T!(
-            res,
-            @Const(x),
-            @Const(rowptr),
-            @Const(colval),
-            @Const(nzval),
-            @Const(y)
-        )
-            row = @index(Global)
-
-            local_sum = zero(eltype(res))
-            @inbounds for j = rowptr[row]:(rowptr[row+1]-1)
-                local_sum += dot(x[colval[j]], $(opa(:(nzval[j]))), y[row])
+            # Perform tree reduction within workgroup
+            @private offset = workgroup_size >>> 1
+            while offset > 0
+                if local_id <= offset
+                    shared[local_id] += shared[local_id+offset]
+                end
+                @synchronize()
+                offset >>>= 1
             end
 
-            @atomic res[1] += local_sum
+            if local_id == 1
+                block_results[group_id] = shared[1]
+            end
         end
 
-        res = similar(nonzeros(_A), T, 1)
-        fill!(res, zero(T))
+        group_size = 256
+        n_groups = min(cld(m, group_size), 256)
+        total_workitems = group_size * n_groups
 
-        kernel! = $kernel_dot!(backend)
-        kernel!(
-            res,
-            x,
-            getrowptr(_A),
-            getcolval(_A),
-            getnzval(_A),
-            y;
-            ndrange = (size(_A, 1),),
-        )
+        # Allocate array for block results (one per workgroup)
+        block_results = similar(nzval, T, n_groups)
 
-        return allowed_getindex(res, 1)
+        # Launch kernel with workgroup configuration
+        kernel! = kernel_workgroup_dot!(backend, group_size)
+        kernel!(block_results, x, rowptr, colval, nzval, y, m; ndrange = (total_workitems,))
+
+        # Final reduction: sum all block results
+        return sum(block_results)
     end
 end

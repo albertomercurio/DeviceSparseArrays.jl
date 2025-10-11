@@ -321,53 +321,86 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
 
         T = promote_type(T1, T2, T3)
 
+        nnz_val = nnz(_A)
+        rowind = getrowind(_A)
+        colind = getcolind(_A)
+        nzval = getnzval(_A)
+
         backend = backend_A
 
-        # TODO: For CPU backend, compute directly without @atomic to support Complex types
-        # backend isa KernelAbstractions.CPU && return sum(...)
-
-        @kernel function kernel_dot_N!(
-            res,
+        # Use a workgroup-based reduction kernel
+        # Each work-item processes multiple nonzero entries with a stride, then reduces within workgroup
+        @kernel inbounds=true unsafe_indices=true function kernel_workgroup_dot!(
+            block_results,
             @Const(x),
             @Const(rowind),
             @Const(colind),
             @Const(nzval),
-            @Const(y)
+            @Const(y),
+            @Const(nnz_val)
         )
-            i = @index(Global)
+            # Get work-item and workgroup indices
+            local_id = @index(Local, Linear)
+            group_id = @index(Group, Linear)
+            global_id = @index(Global, Linear)
 
-            @inbounds begin
+            workgroup_size = @uniform @groupsize()[1]
+            stride = @uniform @ndrange()[1]
+
+            # Allocate shared memory for workgroup reduction
+            shared = @localmem(eltype(block_results), workgroup_size)
+
+            # Each work-item accumulates its contribution from nonzero entries with stride
+            local_sum = zero(eltype(block_results))
+            for i = global_id:stride:nnz_val
                 row = rowind[i]
                 col = colind[i]
-                local_sum = dot(x[row], $(opa(:(nzval[i]))), y[col])
-                @atomic res[1] += local_sum
+                local_sum += $(
+                    transa ? :(dot(x[col], $(opa(:(nzval[i]))), y[row])) :
+                    :(dot(x[row], $(opa(:(nzval[i]))), y[col]))
+                )
+            end
+
+            # Store local sum in shared memory
+            shared[local_id] = local_sum
+            @synchronize()
+
+            # Perform tree reduction within workgroup
+            @private offset = workgroup_size >>> 1
+            while offset > 0
+                if local_id <= offset
+                    shared[local_id] += shared[local_id+offset]
+                end
+                @synchronize()
+                offset >>>= 1
+            end
+
+            if local_id == 1
+                block_results[group_id] = shared[1]
             end
         end
 
-        @kernel function kernel_dot_T!(
-            res,
-            @Const(x),
-            @Const(rowind),
-            @Const(colind),
-            @Const(nzval),
-            @Const(y)
+        group_size = 256
+        n_groups = min(cld(nnz_val, group_size), 256)
+        total_workitems = group_size * n_groups
+
+        # Allocate array for block results (one per workgroup)
+        block_results = similar(nzval, T, n_groups)
+
+        # Launch kernel with workgroup configuration
+        kernel! = kernel_workgroup_dot!(backend, group_size)
+        kernel!(
+            block_results,
+            x,
+            rowind,
+            colind,
+            nzval,
+            y,
+            nnz_val;
+            ndrange = (total_workitems,),
         )
-            i = @index(Global)
 
-            @inbounds begin
-                row = rowind[i]
-                col = colind[i]
-                local_sum = dot(x[col], $(opa(:(nzval[i]))), y[row])
-                @atomic res[1] += local_sum
-            end
-        end
-
-        res = similar(nonzeros(_A), T, 1)
-        fill!(res, zero(T))
-
-        kernel! = $kernel_dot!(backend)
-        kernel!(res, x, getrowind(_A), getcolind(_A), getnzval(_A), y; ndrange = (nnz(_A),))
-
-        return allowed_getindex(res, 1)
+        # Final reduction: sum all block results
+        return sum(block_results)
     end
 end
