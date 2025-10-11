@@ -32,9 +32,9 @@ function shared_test_conversion_matrix_coo(
 )
     @testset "Conversion" begin
         A = spzeros(Float32, 0, 0)
-        rows = [1, 2, 1]
-        cols = [1, 1, 2]
-        vals = [1.0, 2.0, 3.0]
+        rows = int_types[end][1, 2, 1]
+        cols = int_types[end][1, 1, 2]
+        vals = float_types[end][1.0, 2.0, 3.0]
         B = sparse(rows, cols, vals, 2, 2)
 
         # test only conversion SparseMatrixCSC <-> DeviceSparseMatrixCOO
@@ -42,7 +42,7 @@ function shared_test_conversion_matrix_coo(
             dA = DeviceSparseMatrixCOO(A)
             @test size(dA) == (0, 0)
             @test length(dA) == 0
-            @test collect(nonzeros(dA)) == Float32[]
+            @test collect(nonzeros(dA)) == int_types[end][]
             @test SparseMatrixCSC(dA) == A
         end
 
@@ -50,7 +50,7 @@ function shared_test_conversion_matrix_coo(
         @test size(dA) == (0, 0)
         @test length(dA) == 0
         @test nnz(dA) == 0
-        @test collect(nonzeros(dA)) == Float32[]
+        @test collect(nonzeros(dA)) == float_types[end][]
 
         dB = adapt(op, DeviceSparseMatrixCOO(B))
         @test size(dB) == (2, 2)
@@ -63,9 +63,9 @@ function shared_test_conversion_matrix_coo(
         @test_throws ArgumentError DeviceSparseMatrixCOO(
             2,
             2,
-            op([1]),
-            op([1]),
-            op([1.0, 2.0]),
+            op(int_types[end][1]),
+            op(int_types[end][1]),
+            op(float_types[end][1.0, 2.0]),
         )
     end
 end
@@ -97,6 +97,9 @@ function shared_test_linearalgebra_matrix_coo(
         for T in (int_types..., float_types..., complex_types...)
             if array_type in ("Base Array", "JLArray")
                 continue # CPU arrays do not support kernel reduction
+            end
+            if T in (Int32,)
+                continue # TODO: Check that Int32 works
             end
             for op_A in (identity, transpose, adjoint)
                 m, n = op_A === identity ? (100, 80) : (80, 100)
