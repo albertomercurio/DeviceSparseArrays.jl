@@ -21,21 +21,25 @@ const SUITE = BenchmarkGroup()
 include("vector_benchmarks.jl")
 include("matrix_benchmarks.jl")
 
+# Create backend-specific groups
+SUITE["Array"] = BenchmarkGroup()
+SUITE["JLArray"] = BenchmarkGroup()
+
 # Run benchmarks for CPU (Array)
 println("Running benchmarks for CPU (Array)...")
-benchmark_vector_sum!(SUITE, Array, "CPU")
-benchmark_vector_sparse_dense_dot!(SUITE, Array, "CPU")
-benchmark_matrix_vector_mul!(SUITE, Array, "CPU")
-benchmark_matrix_matrix_mul!(SUITE, Array, "CPU")
-benchmark_three_arg_dot!(SUITE, Array, "CPU")
+benchmark_vector_sum!(SUITE["Array"], Array, "CPU")
+benchmark_vector_sparse_dense_dot!(SUITE["Array"], Array, "CPU")
+benchmark_matrix_vector_mul!(SUITE["Array"], Array, "CPU")
+benchmark_matrix_matrix_mul!(SUITE["Array"], Array, "CPU")
+benchmark_three_arg_dot!(SUITE["Array"], Array, "CPU")
 
 # Run benchmarks for JLArrays
 println("Running benchmarks for JLArrays...")
-benchmark_vector_sum!(SUITE, jl, "JLArray")
-benchmark_vector_sparse_dense_dot!(SUITE, jl, "JLArray")
-benchmark_matrix_vector_mul!(SUITE, jl, "JLArray")
-benchmark_matrix_matrix_mul!(SUITE, jl, "JLArray")
-benchmark_three_arg_dot!(SUITE, jl, "JLArray")
+benchmark_vector_sum!(SUITE["JLArray"], jl, "JLArray")
+benchmark_vector_sparse_dense_dot!(SUITE["JLArray"], jl, "JLArray")
+benchmark_matrix_vector_mul!(SUITE["JLArray"], jl, "JLArray")
+benchmark_matrix_matrix_mul!(SUITE["JLArray"], jl, "JLArray")
+benchmark_three_arg_dot!(SUITE["JLArray"], jl, "JLArray")
 
 # Tune and run benchmarks
 println("\nTuning benchmarks...")
