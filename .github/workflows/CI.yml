@@ -37,8 +37,7 @@ jobs:
             arch: 'arm64'
         group:
           - 'CPU'
-        arch:
-          - x64
+        
         include:
           - version: 'pre'
             experimental: true
