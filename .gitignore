@@ -7,5 +7,5 @@
 /test/Manifest*.toml
 /test/*/Manifest*.toml
 /benchmarks/Manifest*.toml
-/benchmarks/benchmarks_output.json
+benchmarks_output.json
 .vscode/

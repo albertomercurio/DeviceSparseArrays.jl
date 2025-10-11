@@ -23,12 +23,8 @@ function benchmark_vector_sum!(
     sv = sprand(T, N, 0.01)
     dsv = adapt(array_constructor, DeviceSparseVector(sv))
 
-    group_name = "Sparse Vector"
-    if !haskey(SUITE, group_name)
-        SUITE[group_name] = BenchmarkGroup()
-    end
-
-    SUITE[group_name]["Sum [$array_type_name]"] = @benchmarkable sum($dsv)
+    # Level 3: Specific operation (will be plotted together)
+    SUITE["Sparse Vector"][array_type_name]["Sum"] = @benchmarkable sum($dsv)
 
     return nothing
 end
@@ -61,12 +57,8 @@ function benchmark_vector_sparse_dense_dot!(
     # Create dense vector
     dense_vec = adapt(array_constructor, randn(T, N))
 
-    group_name = "Sparse Vector"
-    if !haskey(SUITE, group_name)
-        SUITE[group_name] = BenchmarkGroup()
-    end
-
-    SUITE[group_name]["Sparse-Dense dot [$array_type_name]"] =
+    # Level 3: Specific operation (will be plotted together)
+    SUITE["Sparse Vector"][array_type_name]["Sparse-Dense dot"] =
         @benchmarkable dot($dsv, $dense_vec)
 
     return nothing

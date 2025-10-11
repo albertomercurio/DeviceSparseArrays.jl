@@ -36,18 +36,14 @@ function benchmark_matrix_vector_mul!(
     vec = adapt(array_constructor, randn(T, N))
     x_vec = adapt(array_constructor, randn(T, N))
 
-    group_name = "Matrix-Vector Multiplication"
-    if !haskey(SUITE, group_name)
-        SUITE[group_name] = BenchmarkGroup()
-    end
-
-    SUITE[group_name]["CSC [$array_type_name]"] =
+    # Level 3: Format (CSC, CSR, COO - will be plotted together)
+    SUITE["Matrix-Vector Multiplication"][array_type_name]["CSC"] =
         @benchmarkable mul!($vec, $dsm_csc, $x_vec)
 
-    SUITE[group_name]["CSR [$array_type_name]"] =
+    SUITE["Matrix-Vector Multiplication"][array_type_name]["CSR"] =
         @benchmarkable mul!($vec, $dsm_csr, $x_vec)
 
-    SUITE[group_name]["COO [$array_type_name]"] =
+    SUITE["Matrix-Vector Multiplication"][array_type_name]["COO"] =
         @benchmarkable mul!($vec, $dsm_coo, $x_vec)
 
     return nothing
@@ -94,18 +90,14 @@ function benchmark_matrix_matrix_mul!(
     mat = adapt(array_constructor, randn(T, N, M))
     result_mat = adapt(array_constructor, zeros(T, N, M))
 
-    group_name = "Matrix-Matrix Multiplication"
-    if !haskey(SUITE, group_name)
-        SUITE[group_name] = BenchmarkGroup()
-    end
-
-    SUITE[group_name]["CSC [$array_type_name]"] =
+    # Level 3: Format (CSC, CSR, COO - will be plotted together)
+    SUITE["Matrix-Matrix Multiplication"][array_type_name]["CSC"] =
         @benchmarkable mul!($result_mat, $dsm_csc, $mat)
 
-    SUITE[group_name]["CSR [$array_type_name]"] =
+    SUITE["Matrix-Matrix Multiplication"][array_type_name]["CSR"] =
         @benchmarkable mul!($result_mat, $dsm_csr, $mat)
 
-    SUITE[group_name]["COO [$array_type_name]"] =
+    SUITE["Matrix-Matrix Multiplication"][array_type_name]["COO"] =
         @benchmarkable mul!($result_mat, $dsm_coo, $mat)
 
     return nothing
@@ -149,18 +141,14 @@ function benchmark_three_arg_dot!(
     x_vec = adapt(array_constructor, randn(T, N))
     y_vec = adapt(array_constructor, randn(T, N))
 
-    group_name = "Three-argument dot"
-    if !haskey(SUITE, group_name)
-        SUITE[group_name] = BenchmarkGroup()
-    end
-
-    SUITE[group_name]["CSC [$array_type_name]"] =
+    # Level 3: Format (CSC, CSR, COO - will be plotted together)
+    SUITE["Three-argument dot"][array_type_name]["CSC"] =
         @benchmarkable dot($x_vec, $dsm_csc, $y_vec)
 
-    SUITE[group_name]["CSR [$array_type_name]"] =
+    SUITE["Three-argument dot"][array_type_name]["CSR"] =
         @benchmarkable dot($x_vec, $dsm_csr, $y_vec)
 
-    SUITE[group_name]["COO [$array_type_name]"] =
+    SUITE["Three-argument dot"][array_type_name]["COO"] =
         @benchmarkable dot($x_vec, $dsm_coo, $y_vec)
 
     return nothing
