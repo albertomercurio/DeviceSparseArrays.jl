@@ -28,13 +28,25 @@ jobs:
           - '1.11'
           - '1.12'
           - 'pre'
-        os:
-          - ubuntu-latest
+        node:
+          - os: 'ubuntu-latest'
+            arch: 'x64'
+          - os: 'windows-latest'
+            arch: 'x64'
+          - os: 'macOS-latest'
+            arch: 'arm64'
+        group:
+          - 'Core'
         arch:
           - x64
         include:
           - version: 'pre'
             experimental: true
+          - version: '1.11'
+            node:
+              os: 'macOS-latest'
+              arch: 'arm64'
+            group: 'Metal'
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
