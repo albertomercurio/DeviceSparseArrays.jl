@@ -5,15 +5,7 @@ using DeviceSparseArrays
 using Adapt
 using JLArrays
 
-# Try to load JLArrays (for testing without GPU)
-try
-    using JLArrays
-    global has_jlarrays = true
-catch
-    global has_jlarrays = false
-end
-
-BLAS.set_num_threads(1)
+BLAS.set_num_threads(2)
 
 const SUITE = BenchmarkGroup()
 
