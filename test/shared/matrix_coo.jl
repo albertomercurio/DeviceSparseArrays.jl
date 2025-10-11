@@ -95,9 +95,6 @@ function shared_test_linearalgebra_matrix_coo(
 
     @testset "Three-argument dot" begin
         for T in (int_types..., float_types..., complex_types...)
-            if array_type in ("Base Array", "JLArray")
-                continue # CPU arrays do not support kernel reduction
-            end
             if T in (Int32,)
                 continue # TODO: Check that Int32 works
             end

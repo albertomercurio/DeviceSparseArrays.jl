@@ -364,17 +364,25 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
             @synchronize()
 
             # Perform tree reduction within workgroup
-            @private offset = workgroup_size >>> 1
-            while offset > 0
-                if local_id <= offset
-                    shared[local_id] += shared[local_id+offset]
-                end
-                @synchronize()
-                offset >>>= 1
-            end
+            # @private offset = workgroup_size >>> 1
+            # while offset > 0
+            #     if local_id <= offset
+            #         shared[local_id] += shared[local_id+offset]
+            #     end
+            #     @synchronize()
+            #     offset >>>= 1
+            # end
+
+            # if local_id == 1
+            #     block_results[group_id] = shared[1]
+            # end
 
             if local_id == 1
-                block_results[group_id] = shared[1]
+                sum = zero(eltype(block_results))
+                for i = 1:workgroup_size
+                    sum += shared[i]
+                end
+                block_results[group_id] = sum
             end
         end
 

@@ -94,9 +94,6 @@ function shared_test_linearalgebra_matrix_csr(
 
     @testset "Three-argument dot" begin
         for T in (int_types..., float_types..., complex_types...)
-            if array_type in ("Base Array", "JLArray")
-                continue # CPU arrays do not support kernel reduction
-            end
             for op_A in (identity, transpose, adjoint)
                 m, n = op_A === identity ? (100, 80) : (80, 100)
                 A = sprand(T, m, n, 0.1)
