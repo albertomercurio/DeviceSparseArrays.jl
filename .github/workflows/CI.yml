@@ -16,7 +16,7 @@ concurrency:
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.node.os }} - ${{ matrix.node.arch }} ( ${{ matrix.group }} )
-    container: ${{ matrix.group == 'CUDA' && 'nvidia/cuda:13.0.1-runtime-ubuntu24.04' || '' }}
+    container: ${{ matrix.group == 'CUDA' && fromJSON('{"image":"nvidia/cuda:12.9.0-runtime-ubuntu24.04","options":"--gpus all"}') || '' }}
     runs-on: ${{ matrix.node.os }}
     timeout-minutes: 60
     continue-on-error: ${{ matrix.experimental || false }}
