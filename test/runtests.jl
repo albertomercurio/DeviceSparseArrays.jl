@@ -68,6 +68,8 @@ if GROUP == "CUDA"
     Pkg.update()
 
     using CUDA
+    CUDA.versioninfo()
+
     include(joinpath(@__DIR__, "cuda/cuda.jl"))
 end
 

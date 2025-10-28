@@ -6,14 +6,17 @@ on:
     tags: ['*']
   pull_request:
   workflow_dispatch:
+
 concurrency:
   # Skip intermediate builds: always.
   # Cancel intermediate builds: only if it is a pull request build.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.node.os }} - ${{ matrix.node.arch }} ( ${{ matrix.group }} )
+    container: ${{ matrix.group == 'CUDA' && 'nvidia/cuda:13.0.1-runtime-ubuntu24.04' || '' }}
     runs-on: ${{ matrix.node.os }}
     timeout-minutes: 60
     continue-on-error: ${{ matrix.experimental || false }}
@@ -46,6 +49,11 @@ jobs:
               os: 'macOS-latest'
               arch: 'arm64'
             group: 'Metal'
+          - version: '1'
+            node:
+              os: 'self-hosted'    # custom local GPU runner
+              arch: 'x64'
+            group: 'CUDA'
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
