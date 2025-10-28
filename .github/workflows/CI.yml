@@ -50,7 +50,7 @@ jobs:
             group: 'Metal'
           - version: '1'
             node:
-              os: 'self-hosted'    # custom local GPU runner
+              os: 'self-hosted' # custom local GPU runner
               arch: 'x64'
             group: 'CUDA'
     steps:
@@ -60,6 +60,7 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.node.arch }}
       - uses: julia-actions/cache@v2
+        if: matrix.group != 'CUDA' # Don't cache on self-hosted runners
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         env:
