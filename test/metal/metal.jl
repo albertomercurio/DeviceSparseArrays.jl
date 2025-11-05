@@ -3,4 +3,5 @@
     shared_test_matrix_csc(MtlArray, "Metal", (Int32,), (Float32,), (ComplexF32,))
     shared_test_matrix_csr(MtlArray, "Metal", (Int32,), (Float32,), (ComplexF32,))
     shared_test_matrix_coo(MtlArray, "Metal", (Int32,), (Float32,), (ComplexF32,))
+    shared_test_matrix_sell(MtlArray, "Metal", (Int32,), (Float32,), (ComplexF32,))
 end

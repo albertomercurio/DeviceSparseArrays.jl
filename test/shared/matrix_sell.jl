@@ -56,7 +56,7 @@ function shared_test_conversion_matrix_sell(
         # TODO: add a better test for internal storage, using hardcoded expected values
         @test sum(collect(nonzeros(dB))) == sum(vals)
         @test sum(filter(x -> x != -1, collect(colvals(dB)))) == sum(B_csr_t.rowval)
-        
+
 
         @test @allowscalar SparseMatrixCSC(dB) == B
         @test @allowscalar SparseMatrixCSC(dB2) == B
@@ -72,7 +72,6 @@ function shared_test_conversion_matrix_sell(
             1,
             2,
             2,
-
         )
     end
 end
@@ -215,7 +214,7 @@ function shared_test_linearalgebra_matrix_sell(
             #    (identity, transpose, adjoint),
             #)
             for (op_A, op_B) in ((identity, identity),)
-                
+
                 dims_A = op_A === identity ? (100, 80) : (80, 100)
                 dims_B = op_B === identity ? (80, 50) : (50, 80)
 
