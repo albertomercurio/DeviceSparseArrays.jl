@@ -43,40 +43,9 @@ end
 
 KernelAbstractions.get_backend(A::AbstractDeviceSparseArray) = get_backend(nonzeros(A))
 
-trans_adj_wrappers_old(fmt) = (
-    (T -> :($fmt{$T}), false, identity, identity, T -> :($T)),
-    (
-        T -> :(Transpose{$T,<:$fmt{$T}}),
-        true,
-        identity,
-        A -> :(parent($A)),
-        T -> :($T<:Real),
-    ),
-    (
-        T -> :(Transpose{$T,<:$fmt{$T}}),
-        true,
-        identity,
-        A -> :(parent($A)),
-        T -> :($T<:Complex),
-    ),
-    (
-        T -> :(Adjoint{$T,<:$fmt{$T}}),
-        true,
-        x -> :(conj($x)),
-        A -> :(parent($A)),
-        T -> :($T),
-    ),
-)
-
 trans_adj_wrappers(fmt) = (
     (T -> :($fmt{$T}), false, false, identity, T -> :($T)),
-    (
-        T -> :(Transpose{$T,<:$fmt{$T}}),
-        true,
-        false,
-        A -> :(parent($A)),
-        T -> :($T<:Real),
-    ),
+    (T -> :(Transpose{$T,<:$fmt{$T}}), true, false, A -> :(parent($A)), T -> :($T<:Real)),
     (
         T -> :(Transpose{$T,<:$fmt{$T}}),
         true,
@@ -84,11 +53,5 @@ trans_adj_wrappers(fmt) = (
         A -> :(parent($A)),
         T -> :($T<:Complex),
     ),
-    (
-        T -> :(Adjoint{$T,<:$fmt{$T}}),
-        true,
-        true,
-        A -> :(parent($A)),
-        T -> :($T),
-    ),
+    (T -> :(Adjoint{$T,<:$fmt{$T}}), true, true, A -> :(parent($A)), T -> :($T)),
 )
