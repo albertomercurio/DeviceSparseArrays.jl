@@ -171,15 +171,13 @@ function LinearAlgebra.tr(A::DeviceSparseMatrixCSC)
 end
 
 # Matrix-Vector and Matrix-Matrix multiplication
-for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCSC)
-    for (wrapb, transb, opb, unwrapb, whereT2) in trans_adj_wrappers(:DenseVecOrMat)
+for (wrapa, transa, conja, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCSC)
+    for (wrapb, transb, conjb, unwrapb, whereT2) in trans_adj_wrappers(:DenseVecOrMat)
         TypeA = wrapa(:(T1))
         TypeB = wrapb(:(T2))
         TypeC = :(DenseVecOrMat{T3})
 
-        kernel_spmatmul! = transa ? :kernel_spmatmul_T! : :kernel_spmatmul_N!
-
-        indB = transb ? (i, j) -> :(($j, $i)) : (i, j) -> :(($i, $j)) # transpose indices
+        kernel_spmatmul! = transa ? :kernel_spmatmul_csc_T! : :kernel_spmatmul_csc_N!
 
         @eval function LinearAlgebra.mul!(
             C::$TypeC,
@@ -223,40 +221,6 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
             # backend_A isa KernelAbstractions.CPU &&
             #     return SparseArrays._spmatmul!(C, _A, _B, α, β)
 
-            @kernel function kernel_spmatmul_N!(
-                C,
-                @Const(colptr),
-                @Const(rowval),
-                @Const(nzval),
-                @Const(B)
-            )
-                k, col = @index(Global, NTuple)
-
-                Bi, Bj = $(indB(:col, :k))
-
-                @inbounds axj = $(opb(:(B[Bi, Bj]))) * α
-                @inbounds for j = colptr[col]:(colptr[col+1]-1) # nzrange(A, col)
-                    @atomic C[rowval[j], k] += $(opa(:(nzval[j]))) * axj
-                end
-            end
-
-            @kernel function kernel_spmatmul_T!(
-                C,
-                @Const(colptr),
-                @Const(rowval),
-                @Const(nzval),
-                @Const(B)
-            )
-                k, col = @index(Global, NTuple)
-
-                tmp = zero(eltype(C))
-                @inbounds for j = colptr[col]:(colptr[col+1]-1) # nzrange(A, col)
-                    Bi, Bj = $(indB(:(rowval[j]), :k))
-                    tmp += $(opa(:(nzval[j]))) * $(opb(:(B[Bi, Bj])))
-                end
-                @inbounds C[col, k] += tmp * α
-            end
-
             β != one(β) && LinearAlgebra._rmul_or_fill!(C, β)
 
             kernel! = $kernel_spmatmul!(backend_A)
@@ -265,7 +229,11 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
                 getcolptr(_A),
                 getrowval(_A),
                 getnzval(_A),
-                _B;
+                _B,
+                α,
+                Val{$conja}(),
+                Val{$conjb}(),
+                Val{$transb}();
                 ndrange = (size(C, 2), size(_A, 2)),
             )
 
@@ -275,8 +243,10 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
 end
 
 # Three-argument dot product: dot(x, A, y) = x' * A * y
-for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCSC)
+for (wrapa, transa, conja, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCSC)
     TypeA = wrapa(:(T1))
+
+    kernel_dot! = transa ? :kernel_workgroup_dot_csc_T! : :kernel_workgroup_dot_csc_N!
 
     @eval function LinearAlgebra.dot(
         x::AbstractVector{T2},
@@ -312,66 +282,6 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
 
         backend = backend_A
 
-        # Use a workgroup-based reduction kernel
-        # Each work-item processes multiple columns with a stride, then reduces within workgroup
-        @kernel inbounds=true unsafe_indices=true function kernel_workgroup_dot!(
-            block_results,
-            @Const(x),
-            @Const(colptr),
-            @Const(rowval),
-            @Const(nzval),
-            @Const(y),
-            @Const(n)
-        )
-            # Get work-item and workgroup indices
-            local_id = @index(Local, Linear)
-            group_id = @index(Group, Linear)
-            global_id = @index(Global, Linear)
-
-            workgroup_size = @uniform @groupsize()[1]
-            stride = @uniform @ndrange()[1]
-
-            # # Allocate shared memory for workgroup reduction
-            shared = @localmem(eltype(block_results), workgroup_size)
-
-            # Each work-item accumulates its contribution from columns with stride
-            local_sum = zero(eltype(block_results))
-            for col = global_id:stride:n
-                for j = colptr[col]:(colptr[col+1]-1)
-                    local_sum += $(
-                        transa ? :(dot(x[col], $(opa(:(nzval[j]))), y[rowval[j]])) :
-                        :(dot(x[rowval[j]], $(opa(:(nzval[j]))), y[col]))
-                    )
-                end
-            end
-
-            # Store local sum in shared memory
-            shared[local_id] = local_sum
-            @synchronize()
-
-            # Perform tree reduction within workgroup
-            # @private offset = workgroup_size >>> 1
-            # while offset > 0
-            #     if local_id <= offset
-            #         shared[local_id] += shared[local_id+offset]
-            #     end
-            #     @synchronize()
-            #     offset >>>= 1
-            # end
-
-            # if local_id == 1
-            #     block_results[group_id] = shared[1]
-            # end
-
-            if local_id == 1
-                sum = zero(eltype(block_results))
-                for i = 1:workgroup_size
-                    sum += shared[i]
-                end
-                block_results[group_id] = sum
-            end
-        end
-
         group_size = 256
         n_groups = min(cld(n, group_size), 256)
         total_workitems = group_size * n_groups
@@ -380,8 +290,18 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
         block_results = similar(nzval, T, n_groups)
 
         # Launch kernel with workgroup configuration
-        kernel! = kernel_workgroup_dot!(backend, group_size)
-        kernel!(block_results, x, colptr, rowval, nzval, y, n; ndrange = (total_workitems,))
+        kernel! = $kernel_dot!(backend, group_size)
+        kernel!(
+            block_results,
+            x,
+            colptr,
+            rowval,
+            nzval,
+            y,
+            n,
+            Val{$conja}();
+            ndrange = (total_workitems,),
+        )
 
         # Final reduction: sum all block results
         return sum(block_results)

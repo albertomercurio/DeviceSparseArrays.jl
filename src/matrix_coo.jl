@@ -187,15 +187,13 @@ function LinearAlgebra.tr(A::DeviceSparseMatrixCOO)
 end
 
 # Matrix-Vector and Matrix-Matrix multiplication
-for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCOO)
-    for (wrapb, transb, opb, unwrapb, whereT2) in trans_adj_wrappers(:DenseVecOrMat)
+for (wrapa, transa, conja, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCOO)
+    for (wrapb, transb, conjb, unwrapb, whereT2) in trans_adj_wrappers(:DenseVecOrMat)
         TypeA = wrapa(:(T1))
         TypeB = wrapb(:(T2))
         TypeC = :(DenseVecOrMat{T3})
 
-        kernel_spmatmul! = transa ? :kernel_spmatmul_T! : :kernel_spmatmul_N!
-
-        indB = transb ? (i, j) -> :(($j, $i)) : (i, j) -> :(($i, $j)) # transpose indices
+        kernel_spmatmul! = transa ? :kernel_spmatmul_coo_T! : :kernel_spmatmul_coo_N!
 
         @eval function LinearAlgebra.mul!(
             C::$TypeC,
@@ -236,42 +234,6 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
             backend_A == backend_B == backend_C ||
                 throw(ArgumentError("All arrays must have the same backend"))
 
-            @kernel function kernel_spmatmul_N!(
-                C,
-                @Const(rowind),
-                @Const(colind),
-                @Const(nzval),
-                @Const(B)
-            )
-                k, i = @index(Global, NTuple)
-
-                @inbounds begin
-                    row = rowind[i]
-                    col = colind[i]
-                    Bi, Bj = $(indB(:col, :k))
-                    axj = $(opb(:(B[Bi, Bj]))) * α
-                    @atomic C[row, k] += $(opa(:(nzval[i]))) * axj
-                end
-            end
-
-            @kernel function kernel_spmatmul_T!(
-                C,
-                @Const(rowind),
-                @Const(colind),
-                @Const(nzval),
-                @Const(B)
-            )
-                k, i = @index(Global, NTuple)
-
-                @inbounds begin
-                    row = rowind[i]
-                    col = colind[i]
-                    Bi, Bj = $(indB(:row, :k))
-                    axj = $(opb(:(B[Bi, Bj]))) * α
-                    @atomic C[col, k] += $(opa(:(nzval[i]))) * axj
-                end
-            end
-
             β != one(β) && LinearAlgebra._rmul_or_fill!(C, β)
 
             kernel! = $kernel_spmatmul!(backend_A)
@@ -280,7 +242,11 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
                 getrowind(_A),
                 getcolind(_A),
                 getnzval(_A),
-                _B;
+                _B,
+                α,
+                Val{$conja}(),
+                Val{$conjb}(),
+                Val{$transb}();
                 ndrange = (size(C, 2), length(nonzeros(_A))),
             )
 
@@ -290,9 +256,10 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
 end
 
 # Three-argument dot product: dot(x, A, y) = x' * A * y
-for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCOO)
+for (wrapa, transa, conja, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCOO)
     TypeA = wrapa(:(T1))
-    kernel_dot! = transa ? :kernel_dot_T! : :kernel_dot_N!
+
+    kernel_dot! = transa ? :kernel_workgroup_dot_coo_T! : :kernel_workgroup_dot_coo_N!
 
     @eval function LinearAlgebra.dot(
         x::AbstractVector{T2},
@@ -328,66 +295,6 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
 
         backend = backend_A
 
-        # Use a workgroup-based reduction kernel
-        # Each work-item processes multiple nonzero entries with a stride, then reduces within workgroup
-        @kernel inbounds=true unsafe_indices=true function kernel_workgroup_dot!(
-            block_results,
-            @Const(x),
-            @Const(rowind),
-            @Const(colind),
-            @Const(nzval),
-            @Const(y),
-            @Const(nnz_val)
-        )
-            # Get work-item and workgroup indices
-            local_id = @index(Local, Linear)
-            group_id = @index(Group, Linear)
-            global_id = @index(Global, Linear)
-
-            workgroup_size = @uniform @groupsize()[1]
-            stride = @uniform @ndrange()[1]
-
-            # Allocate shared memory for workgroup reduction
-            shared = @localmem(eltype(block_results), workgroup_size)
-
-            # Each work-item accumulates its contribution from nonzero entries with stride
-            local_sum = zero(eltype(block_results))
-            for i = global_id:stride:nnz_val
-                row = rowind[i]
-                col = colind[i]
-                local_sum += $(
-                    transa ? :(dot(x[col], $(opa(:(nzval[i]))), y[row])) :
-                    :(dot(x[row], $(opa(:(nzval[i]))), y[col]))
-                )
-            end
-
-            # Store local sum in shared memory
-            shared[local_id] = local_sum
-            @synchronize()
-
-            # Perform tree reduction within workgroup
-            # @private offset = workgroup_size >>> 1
-            # while offset > 0
-            #     if local_id <= offset
-            #         shared[local_id] += shared[local_id+offset]
-            #     end
-            #     @synchronize()
-            #     offset >>>= 1
-            # end
-
-            # if local_id == 1
-            #     block_results[group_id] = shared[1]
-            # end
-
-            if local_id == 1
-                sum = zero(eltype(block_results))
-                for i = 1:workgroup_size
-                    sum += shared[i]
-                end
-                block_results[group_id] = sum
-            end
-        end
-
         group_size = 256
         n_groups = min(cld(nnz_val, group_size), 256)
         total_workitems = group_size * n_groups
@@ -396,7 +303,7 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
         block_results = similar(nzval, T, n_groups)
 
         # Launch kernel with workgroup configuration
-        kernel! = kernel_workgroup_dot!(backend, group_size)
+        kernel! = $kernel_dot!(backend, group_size)
         kernel!(
             block_results,
             x,
@@ -404,7 +311,8 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
             colind,
             nzval,
             y,
-            nnz_val;
+            nnz_val,
+            Val{$conja}();
             ndrange = (total_workitems,),
         )
 
