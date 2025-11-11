@@ -40,10 +40,10 @@ using LinearAlgebra
 A_sparse = sprand(Float64, 100, 80, 0.1)
 
 # Convert to DeviceSparseMatrixCSC (CPU by default)
-A_device = DeviceSparseMatrixCSC(A_sparse)
+A_device = DeviceSparseMatrixCSC(A_sparse);
 
 # Create a vector for matrix-vector multiplication
-b = rand(Float64, 3)
+b = rand(Float64, 80)
 
 # Perform matrix-vector multiplication
 c = A_device * b

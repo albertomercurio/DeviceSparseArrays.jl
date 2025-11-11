@@ -69,25 +69,25 @@ trans_adj_wrappers_old(fmt) = (
 )
 
 trans_adj_wrappers(fmt) = (
-    (T -> :($fmt{$T}), false, identity, identity, T -> :($T)),
+    (T -> :($fmt{$T}), false, false, identity, T -> :($T)),
     (
         T -> :(Transpose{$T,<:$fmt{$T}}),
         true,
-        identity,
+        false,
         A -> :(parent($A)),
         T -> :($T<:Real),
     ),
     (
         T -> :(Transpose{$T,<:$fmt{$T}}),
         true,
-        identity,
+        false,
         A -> :(parent($A)),
         T -> :($T<:Complex),
     ),
     (
         T -> :(Adjoint{$T,<:$fmt{$T}}),
         true,
-        conj,
+        true,
         A -> :(parent($A)),
         T -> :($T),
     ),
