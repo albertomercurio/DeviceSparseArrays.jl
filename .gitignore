@@ -9,3 +9,5 @@
 /benchmarks/Manifest*.toml
 benchmarks_output.json
 .vscode/
+.gemini/
+gha-creds-*.json
