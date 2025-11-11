@@ -20,7 +20,9 @@ import KernelAbstractions:
     @localmem,
     @synchronize,
     @private,
-    @uniform
+    @uniform,
+    @print,
+    @Const
 using AcceleratedKernels
 
 import Adapt
@@ -29,7 +31,10 @@ export AbstractDeviceSparseArray,
     AbstractDeviceSparseVector, AbstractDeviceSparseMatrix, AbstractDeviceSparseVecOrMat
 
 export DeviceSparseVector,
-    DeviceSparseMatrixCSC, DeviceSparseMatrixCSR, DeviceSparseMatrixCOO
+    DeviceSparseMatrixCSC,
+    DeviceSparseMatrixCSR,
+    DeviceSparseMatrixCOO,
+    DeviceSparseMatrixSELL
 
 include("core.jl")
 include("helpers.jl")
@@ -43,5 +48,6 @@ include("matrix_csr.jl")
 
 include("matrix_coo_kernels.jl")
 include("matrix_coo.jl")
+include("matrix_sell.jl")
 
 end # module
