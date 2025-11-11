@@ -320,3 +320,14 @@ for (wrapa, transa, conja, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparse
         return sum(block_results)
     end
 end
+
+# Helper function for adding DeviceSparseMatrixCOO to dense matrix
+function _add_sparse_to_dense!(C::DenseMatrix, A::DeviceSparseMatrixCOO)
+    backend = get_backend(A)
+    nnz_val = nnz(A)
+
+    kernel! = kernel_add_sparse_to_dense_coo!(backend)
+    kernel!(C, getrowind(A), getcolind(A), getnzval(A); ndrange = (nnz_val,))
+
+    return C
+end
