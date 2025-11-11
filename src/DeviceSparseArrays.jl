@@ -33,15 +33,15 @@ export DeviceSparseVector,
 
 include("core.jl")
 include("helpers.jl")
-include("vector.jl")
+include("vector/vector.jl")
 
 include("matrix_csc/matrix_csc_kernels.jl")
 include("matrix_csc/matrix_csc.jl")
 
-include("matrix_csr_kernels.jl")
-include("matrix_csr.jl")
+include("matrix_csr/matrix_csr_kernels.jl")
+include("matrix_csr/matrix_csr.jl")
 
-include("matrix_coo_kernels.jl")
-include("matrix_coo.jl")
+include("matrix_coo/matrix_coo_kernels.jl")
+include("matrix_coo/matrix_coo.jl")
 
 end # module

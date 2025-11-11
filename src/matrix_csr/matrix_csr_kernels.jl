@@ -18,7 +18,7 @@
         valb = CONJB ? conj(B[Bi, Bj]) : B[Bi, Bj]
         tmp += vala * valb
     end
-    @inbounds C[row, k] += tmp * α
+    C[row, k] += tmp * α
 end
 
 @kernel inbounds=true function kernel_spmatmul_csr_T!(

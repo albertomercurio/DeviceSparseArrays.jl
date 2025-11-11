@@ -11,15 +11,13 @@
 ) where {CONJA,CONJB,TRANSB}
     k, i = @index(Global, NTuple)
 
-    @inbounds begin
-        row = rowind[i]
-        col = colind[i]
-        Bi, Bj = TRANSB ? (k, col) : (col, k)
-        vala = CONJA ? conj(nzval[i]) : nzval[i]
-        valb = CONJB ? conj(B[Bi, Bj]) : B[Bi, Bj]
-        axj = valb * α
-        @atomic C[row, k] += vala * axj
-    end
+    row = rowind[i]
+    col = colind[i]
+    Bi, Bj = TRANSB ? (k, col) : (col, k)
+    vala = CONJA ? conj(nzval[i]) : nzval[i]
+    valb = CONJB ? conj(B[Bi, Bj]) : B[Bi, Bj]
+    axj = valb * α
+    @atomic C[row, k] += vala * axj
 end
 
 @kernel inbounds=true function kernel_spmatmul_coo_T!(
@@ -35,15 +33,13 @@ end
 ) where {CONJA,CONJB,TRANSB}
     k, i = @index(Global, NTuple)
 
-    @inbounds begin
-        row = rowind[i]
-        col = colind[i]
-        Bi, Bj = TRANSB ? (k, row) : (row, k)
-        vala = CONJA ? conj(nzval[i]) : nzval[i]
-        valb = CONJB ? conj(B[Bi, Bj]) : B[Bi, Bj]
-        axj = valb * α
-        @atomic C[col, k] += vala * axj
-    end
+    row = rowind[i]
+    col = colind[i]
+    Bi, Bj = TRANSB ? (k, row) : (row, k)
+    vala = CONJA ? conj(nzval[i]) : nzval[i]
+    valb = CONJB ? conj(B[Bi, Bj]) : B[Bi, Bj]
+    axj = valb * α
+    @atomic C[col, k] += vala * axj
 end
 
 @kernel inbounds=true unsafe_indices=true function kernel_workgroup_dot_coo_N!(
