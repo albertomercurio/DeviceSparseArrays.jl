@@ -170,6 +170,48 @@ function LinearAlgebra.tr(A::DeviceSparseMatrixCSC)
     return allowed_getindex(res, 1)
 end
 
+@kernel function kernel_spmatmul_N!(
+    C,
+    @Const(colptr),
+    @Const(rowval),
+    @Const(nzval),
+    @Const(B),
+    α,
+    opa,
+    opb,
+    ::Val{TRANSB},
+) where {TRANSB}
+    k, col = @index(Global, NTuple)
+
+    Bi, Bj = TRANSB ? (k, col) : (col, k)
+
+    @inbounds axj = opb(B[Bi, Bj]) * α
+    @inbounds for j = colptr[col]:(colptr[col+1]-1) # nzrange(A, col)
+        @atomic C[rowval[j], k] += opa(nzval[j]) * axj
+    end
+end
+
+@kernel function kernel_spmatmul_T!(
+    C,
+    @Const(colptr),
+    @Const(rowval),
+    @Const(nzval),
+    @Const(B),
+    α,
+    opa,
+    opb,
+    ::Val{TRANSB},
+) where {TRANSB}
+    k, col = @index(Global, NTuple)
+
+    tmp = zero(eltype(C))
+    @inbounds for j = colptr[col]:(colptr[col+1]-1) # nzrange(A, col)
+        Bi, Bj = TRANSB ? (k, rowval[j]) : (rowval[j], k)
+        tmp += opa(nzval[j]) * opb(B[Bi, Bj])
+    end
+    @inbounds C[col, k] += tmp * α
+end
+
 # Matrix-Vector and Matrix-Matrix multiplication
 for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCSC)
     for (wrapb, transb, opb, unwrapb, whereT2) in trans_adj_wrappers(:DenseVecOrMat)
@@ -178,8 +220,6 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
         TypeC = :(DenseVecOrMat{T3})
 
         kernel_spmatmul! = transa ? :kernel_spmatmul_T! : :kernel_spmatmul_N!
-
-        indB = transb ? (i, j) -> :(($j, $i)) : (i, j) -> :(($i, $j)) # transpose indices
 
         @eval function LinearAlgebra.mul!(
             C::$TypeC,
@@ -223,40 +263,6 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
             # backend_A isa KernelAbstractions.CPU &&
             #     return SparseArrays._spmatmul!(C, _A, _B, α, β)
 
-            @kernel function kernel_spmatmul_N!(
-                C,
-                @Const(colptr),
-                @Const(rowval),
-                @Const(nzval),
-                @Const(B)
-            )
-                k, col = @index(Global, NTuple)
-
-                Bi, Bj = $(indB(:col, :k))
-
-                @inbounds axj = $(opb(:(B[Bi, Bj]))) * α
-                @inbounds for j = colptr[col]:(colptr[col+1]-1) # nzrange(A, col)
-                    @atomic C[rowval[j], k] += $(opa(:(nzval[j]))) * axj
-                end
-            end
-
-            @kernel function kernel_spmatmul_T!(
-                C,
-                @Const(colptr),
-                @Const(rowval),
-                @Const(nzval),
-                @Const(B)
-            )
-                k, col = @index(Global, NTuple)
-
-                tmp = zero(eltype(C))
-                @inbounds for j = colptr[col]:(colptr[col+1]-1) # nzrange(A, col)
-                    Bi, Bj = $(indB(:(rowval[j]), :k))
-                    tmp += $(opa(:(nzval[j]))) * $(opb(:(B[Bi, Bj])))
-                end
-                @inbounds C[col, k] += tmp * α
-            end
-
             β != one(β) && LinearAlgebra._rmul_or_fill!(C, β)
 
             kernel! = $kernel_spmatmul!(backend_A)
@@ -265,7 +271,11 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
                 getcolptr(_A),
                 getrowval(_A),
                 getnzval(_A),
-                _B;
+                _B,
+                α,
+                $opa,
+                $opb,
+                Val{$transb}();
                 ndrange = (size(C, 2), size(_A, 2)),
             )
 
@@ -275,7 +285,7 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
 end
 
 # Three-argument dot product: dot(x, A, y) = x' * A * y
-for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCSC)
+for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers_old(:DeviceSparseMatrixCSC)
     TypeA = wrapa(:(T1))
 
     @eval function LinearAlgebra.dot(

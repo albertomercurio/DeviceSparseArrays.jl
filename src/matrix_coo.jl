@@ -187,8 +187,8 @@ function LinearAlgebra.tr(A::DeviceSparseMatrixCOO)
 end
 
 # Matrix-Vector and Matrix-Matrix multiplication
-for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCOO)
-    for (wrapb, transb, opb, unwrapb, whereT2) in trans_adj_wrappers(:DenseVecOrMat)
+for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers_old(:DeviceSparseMatrixCOO)
+    for (wrapb, transb, opb, unwrapb, whereT2) in trans_adj_wrappers_old(:DenseVecOrMat)
         TypeA = wrapa(:(T1))
         TypeB = wrapb(:(T2))
         TypeC = :(DenseVecOrMat{T3})
@@ -290,7 +290,7 @@ for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMa
 end
 
 # Three-argument dot product: dot(x, A, y) = x' * A * y
-for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers(:DeviceSparseMatrixCOO)
+for (wrapa, transa, opa, unwrapa, whereT1) in trans_adj_wrappers_old(:DeviceSparseMatrixCOO)
     TypeA = wrapa(:(T1))
     kernel_dot! = transa ? :kernel_dot_T! : :kernel_dot_N!
 
