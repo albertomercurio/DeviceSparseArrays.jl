@@ -96,6 +96,26 @@ function DeviceSparseMatrixCOO(A::SparseMatrixCSC{Tv,Ti}) where {Tv,Ti}
 end
 
 # Conversion from DeviceSparseMatrixCSC to DeviceSparseMatrixCOO
+"""
+    DeviceSparseMatrixCOO(A::DeviceSparseMatrixCSC)
+
+Convert a Compressed Sparse Column (CSC) matrix to Coordinate (COO) format.
+
+The conversion preserves all matrix data and maintains backend compatibility.
+The result will be on the same backend (CPU/GPU) as the input matrix.
+
+# Examples
+```julia
+using DeviceSparseArrays, SparseArrays
+
+# Create a CSC matrix
+A_sparse = sparse([1, 2, 3], [1, 2, 3], [1.0, 2.0, 3.0], 3, 3)
+A_csc = DeviceSparseMatrixCSC(A_sparse)
+
+# Convert to COO format
+A_coo = DeviceSparseMatrixCOO(A_csc)
+```
+"""
 function DeviceSparseMatrixCOO(A::DeviceSparseMatrixCSC{Tv,Ti}) where {Tv,Ti}
     m, n = size(A)
     nnz_count = nnz(A)
@@ -148,6 +168,27 @@ function SparseMatrixCSC(A::DeviceSparseMatrixCOO)
 end
 
 # Conversion from DeviceSparseMatrixCOO to DeviceSparseMatrixCSC
+"""
+    DeviceSparseMatrixCSC(A::DeviceSparseMatrixCOO)
+
+Convert a Coordinate (COO) matrix to Compressed Sparse Column (CSC) format.
+
+The conversion sorts the COO entries by column (then by row within each column)
+and builds the column pointer structure. The result maintains backend compatibility
+with the input matrix.
+
+# Examples
+```julia
+using DeviceSparseArrays, SparseArrays
+
+# Create a COO matrix
+A_sparse = sparse([1, 2, 3], [1, 2, 3], [1.0, 2.0, 3.0], 3, 3)
+A_coo = DeviceSparseMatrixCOO(A_sparse)
+
+# Convert to CSC format
+A_csc = DeviceSparseMatrixCSC(A_coo)
+```
+"""
 function DeviceSparseMatrixCSC(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     m, n = size(A)
     nnz_count = nnz(A)
@@ -191,6 +232,27 @@ function DeviceSparseMatrixCSC(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
 end
 
 # Conversion from DeviceSparseMatrixCOO to DeviceSparseMatrixCSR
+"""
+    DeviceSparseMatrixCSR(A::DeviceSparseMatrixCOO)
+
+Convert a Coordinate (COO) matrix to Compressed Sparse Row (CSR) format.
+
+The conversion sorts the COO entries by row (then by column within each row)
+and builds the row pointer structure. The result maintains backend compatibility
+with the input matrix.
+
+# Examples
+```julia
+using DeviceSparseArrays, SparseArrays
+
+# Create a COO matrix
+A_sparse = sparse([1, 2, 3], [1, 2, 3], [1.0, 2.0, 3.0], 3, 3)
+A_coo = DeviceSparseMatrixCOO(A_sparse)
+
+# Convert to CSR format
+A_csr = DeviceSparseMatrixCSR(A_coo)
+```
+"""
 function DeviceSparseMatrixCSR(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     m, n = size(A)
     nnz_count = nnz(A)
@@ -234,6 +296,26 @@ function DeviceSparseMatrixCSR(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
 end
 
 # Conversion from DeviceSparseMatrixCSR to DeviceSparseMatrixCOO
+"""
+    DeviceSparseMatrixCOO(A::DeviceSparseMatrixCSR)
+
+Convert a Compressed Sparse Row (CSR) matrix to Coordinate (COO) format.
+
+The conversion preserves all matrix data and maintains backend compatibility.
+The result will be on the same backend (CPU/GPU) as the input matrix.
+
+# Examples
+```julia
+using DeviceSparseArrays, SparseArrays
+
+# Create a CSR matrix
+A_sparse = sparse([1, 2, 3], [1, 2, 3], [1.0, 2.0, 3.0], 3, 3)
+A_csr = DeviceSparseMatrixCSR(A_sparse)
+
+# Convert to COO format
+A_coo = DeviceSparseMatrixCOO(A_csr)
+```
+"""
 function DeviceSparseMatrixCOO(A::DeviceSparseMatrixCSR{Tv,Ti}) where {Tv,Ti}
     m, n = size(A)
     nnz_count = nnz(A)
