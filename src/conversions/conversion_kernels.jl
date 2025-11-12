@@ -60,12 +60,12 @@ end
 @kernel inbounds=true function kernel_count_per_col!(colptr, @Const(colind_sorted))
     i = @index(Global)
     col = colind_sorted[i]
-    @atomic colptr[col + 1] += 1
+    @atomic colptr[col+1] += 1
 end
 
 # Kernel for counting entries per row (for COO → CSR)
 @kernel inbounds=true function kernel_count_per_row!(rowptr, @Const(rowind_sorted))
     i = @index(Global)
     row = rowind_sorted[i]
-    @atomic rowptr[row + 1] += 1
+    @atomic rowptr[row+1] += 1
 end

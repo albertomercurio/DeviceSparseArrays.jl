@@ -27,4 +27,11 @@
         (Float32, Float64),
         (ComplexF32, ComplexF64),
     )
+    shared_test_conversions(
+        CuArray,
+        "CUDA",
+        (Int32, Int64),
+        (Float32, Float64),
+        (ComplexF32, ComplexF64),
+    )
 end

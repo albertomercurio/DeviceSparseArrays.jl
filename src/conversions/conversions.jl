@@ -1,8 +1,5 @@
 # Conversions between CSC, CSR, and COO sparse matrix formats
-# All conversions operate on-device, with CPU fallback only for JLBackend
-
-# Helper function to check if backend is JLBackend (which doesn't support AcceleratedKernels)
-_is_jlbackend(backend) = string(typeof(backend)) == "JLBackend"
+# All conversions operate on-device
 
 # ============================================================================
 # CSC ↔ COO Conversions
@@ -80,16 +77,7 @@ function DeviceSparseMatrixCSC(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     kernel! = kernel_make_csc_keys!(backend)
     kernel!(keys, A.rowind, A.colind, n; ndrange = (nnz_count,))
 
-    # Sort - use AcceleratedKernels for GPU, CPU fallback for JLBackend
-    if _is_jlbackend(backend)
-        # JLBackend doesn't support AcceleratedKernels - use CPU fallback
-        keys_cpu = collect(keys)
-        perm_cpu = sortperm(keys_cpu)
-        perm = Adapt.adapt_structure(backend, perm_cpu)
-    else
-        # Use AcceleratedKernels for GPU and standard CPU backends
-        perm = AcceleratedKernels.sortperm(keys)
-    end
+    perm = AcceleratedKernels.sortperm(keys)
 
     # Apply permutation to get sorted arrays
     rowind_sorted = A.rowind[perm]
@@ -104,20 +92,9 @@ function DeviceSparseMatrixCSC(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     kernel! = kernel_count_per_col!(backend)
     kernel!(colptr, colind_sorted; ndrange = (nnz_count,))
 
-    # Compute cumulative sum - use CPU fallback for JLBackend
-    if _is_jlbackend(backend) || backend isa KernelAbstractions.CPU
-        # For CPU-like backends, use CPU cumsum
-        colptr_cpu = collect(colptr)
-        colptr_cpu[1] = 1
-        for i = 2:(n + 1)
-            colptr_cpu[i] += colptr_cpu[i - 1]
-        end
-        colptr = Adapt.adapt_structure(backend, colptr_cpu)
-    else
-        # For GPU backends, use AcceleratedKernels scan
-        colptr[1] = 1
-        colptr[2:end] .= AcceleratedKernels.cumsum(colptr[2:end]) .+ 1
-    end
+    # Compute cumulative sum
+    allowed_setindex!(colptr, 1, 1) # TODO: Is there a better way to do this?
+    colptr[2:end] .= AcceleratedKernels.cumsum(colptr[2:end]) .+ 1
 
     return DeviceSparseMatrixCSC(m, n, colptr, rowind_sorted, nzval_sorted)
 end
@@ -198,16 +175,8 @@ function DeviceSparseMatrixCSR(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     kernel! = kernel_make_csr_keys!(backend)
     kernel!(keys, A.rowind, A.colind, m; ndrange = (nnz_count,))
 
-    # Sort - use AcceleratedKernels for GPU, CPU fallback for JLBackend
-    if _is_jlbackend(backend)
-        # JLBackend doesn't support AcceleratedKernels - use CPU fallback
-        keys_cpu = collect(keys)
-        perm_cpu = sortperm(keys_cpu)
-        perm = Adapt.adapt_structure(backend, perm_cpu)
-    else
-        # Use AcceleratedKernels for GPU and standard CPU backends
-        perm = AcceleratedKernels.sortperm(keys)
-    end
+    # Sort - use AcceleratedKernels
+    perm = AcceleratedKernels.sortperm(keys)
 
     # Apply permutation to get sorted arrays
     rowind_sorted = A.rowind[perm]
@@ -222,20 +191,9 @@ function DeviceSparseMatrixCSR(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     kernel! = kernel_count_per_row!(backend)
     kernel!(rowptr, rowind_sorted; ndrange = (nnz_count,))
 
-    # Compute cumulative sum - use CPU fallback for JLBackend
-    if _is_jlbackend(backend) || backend isa KernelAbstractions.CPU
-        # For CPU-like backends, use CPU cumsum
-        rowptr_cpu = collect(rowptr)
-        rowptr_cpu[1] = 1
-        for i = 2:(m + 1)
-            rowptr_cpu[i] += rowptr_cpu[i - 1]
-        end
-        rowptr = Adapt.adapt_structure(backend, rowptr_cpu)
-    else
-        # For GPU backends, use AcceleratedKernels scan
-        rowptr[1] = 1
-        rowptr[2:end] .= AcceleratedKernels.cumsum(rowptr[2:end]) .+ 1
-    end
+    # Compute cumulative sum
+    allowed_setindex!(rowptr, 1, 1) # TODO: Is there a better way to do this?
+    rowptr[2:end] .= AcceleratedKernels.cumsum(rowptr[2:end]) .+ 1
 
     return DeviceSparseMatrixCSR(m, n, rowptr, colind_sorted, nzval_sorted)
 end
