@@ -129,3 +129,17 @@ end
         block_results[group_id] = sum
     end
 end
+
+# Kernel for adding sparse matrix to dense matrix (CSR format)
+@kernel inbounds=true function kernel_add_sparse_to_dense_csr!(
+    C,
+    @Const(rowptr),
+    @Const(colval),
+    @Const(nzval),
+)
+    row = @index(Global)
+
+    @inbounds for j = rowptr[row]:(rowptr[row+1]-1)
+        C[row, colval[j]] += nzval[j]
+    end
+end

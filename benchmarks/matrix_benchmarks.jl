@@ -153,3 +153,53 @@ function benchmark_three_arg_dot!(
 
     return nothing
 end
+
+"""
+    benchmark_sparse_dense_add!(SUITE, array_constructor, array_type_name; N=10000, T=Float64)
+
+Benchmark sparse + dense matrix addition for CSC, CSR, and COO formats.
+
+# Arguments
+- `SUITE`: The BenchmarkGroup to add benchmarks to
+- `array_constructor`: Function to construct arrays (e.g., `Array`, `JLArray`)
+- `array_type_name`: String name for the array type (for display)
+
+# Keyword Arguments
+- `N`: Size of the matrix (default: 10000)
+- `T`: Element type (default: Float64)
+"""
+function benchmark_sparse_dense_add!(
+    SUITE,
+    array_constructor,
+    array_type_name;
+    N = 10000,
+    T = Float64,
+)
+    # Create sparse matrix with 1% density
+    sm_csc_std = sprand(T, N, N, 0.01)
+
+    # Convert to different formats
+    sm_csc = DeviceSparseMatrixCSC(sm_csc_std)
+    sm_csr = DeviceSparseMatrixCSR(sm_csc_std)
+    sm_coo = DeviceSparseMatrixCOO(sm_csc_std)
+
+    # Adapt to device
+    dsm_csc = adapt(array_constructor, sm_csc)
+    dsm_csr = adapt(array_constructor, sm_csr)
+    dsm_coo = adapt(array_constructor, sm_coo)
+
+    # Create dense matrix
+    dense_mat = adapt(array_constructor, randn(T, N, N))
+
+    # Level 3: Format (CSC, CSR, COO - will be plotted together)
+    SUITE["Sparse + Dense Addition"][array_type_name]["CSC"] =
+        @benchmarkable $dsm_csc + $dense_mat
+
+    SUITE["Sparse + Dense Addition"][array_type_name]["CSR"] =
+        @benchmarkable $dsm_csr + $dense_mat
+
+    SUITE["Sparse + Dense Addition"][array_type_name]["COO"] =
+        @benchmarkable $dsm_coo + $dense_mat
+
+    return nothing
+end

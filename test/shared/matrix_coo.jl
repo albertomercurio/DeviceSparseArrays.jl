@@ -252,4 +252,29 @@ function shared_test_linearalgebra_matrix_coo(
             end
         end
     end
+
+    @testset "Sparse + Dense Matrix Addition" begin
+        for T in (int_types..., float_types..., complex_types...)
+            m, n = 50, 40
+            A = sprand(T, m, n, 0.1)
+            B = rand(T, m, n)
+
+            dA = adapt(op, DeviceSparseMatrixCOO(A))
+            dB = op(B)
+
+            # Test sparse + dense
+            result = dA + dB
+            expected = Matrix(A) + B
+            @test collect(result) ≈ expected
+
+            # Test dense + sparse (commutative)
+            result2 = dB + dA
+            @test collect(result2) ≈ expected
+
+            # Test dimension mismatch
+            B_wrong = rand(T, m + 1, n)
+            dB_wrong = op(B_wrong)
+            @test_throws DimensionMismatch dA + dB_wrong
+        end
+    end
 end

@@ -20,6 +20,7 @@ benchmark_vector_sparse_dense_dot!(SUITE, Array, "Array")
 benchmark_matrix_vector_mul!(SUITE, Array, "Array")
 benchmark_matrix_matrix_mul!(SUITE, Array, "Array")
 benchmark_three_arg_dot!(SUITE, Array, "Array")
+benchmark_sparse_dense_add!(SUITE, Array, "Array")
 
 # Run benchmarks for JLArrays
 println("Running benchmarks for JLArrays...")
@@ -28,6 +29,7 @@ benchmark_vector_sparse_dense_dot!(SUITE, jl, "JLArray")
 benchmark_matrix_vector_mul!(SUITE, jl, "JLArray")
 benchmark_matrix_matrix_mul!(SUITE, jl, "JLArray")
 benchmark_three_arg_dot!(SUITE, jl, "JLArray")
+benchmark_sparse_dense_add!(SUITE, jl, "JLArray")
 
 # Tune and run benchmarks
 println("\nTuning benchmarks...")

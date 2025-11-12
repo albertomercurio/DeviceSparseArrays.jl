@@ -55,3 +55,56 @@ trans_adj_wrappers(fmt) = (
     ),
     (T -> :(Adjoint{$T,<:$fmt{$T}}), true, true, A -> :(parent($A)), T -> :($T)),
 )
+
+# Generic addition between AbstractDeviceSparseMatrix and DenseMatrix
+"""
+    +(A::AbstractDeviceSparseMatrix, B::DenseMatrix)
+
+Add a sparse matrix `A` to a dense matrix `B`, returning a dense matrix.
+All backends must be compatible.
+
+# Examples
+```jldoctest
+julia> using DeviceSparseArrays, SparseArrays
+
+julia> A = DeviceSparseMatrixCSC(sparse([1, 2], [1, 2], [1.0, 2.0], 3, 3));
+
+julia> B = ones(3, 3);
+
+julia> C = A + B;
+
+julia> collect(C)
+3×3 Matrix{Float64}:
+ 2.0  1.0  1.0
+ 1.0  3.0  1.0
+ 1.0  1.0  1.0
+```
+"""
+function Base.:+(A::AbstractDeviceSparseMatrix, B::DenseMatrix)
+    size(A) == size(B) || throw(
+        DimensionMismatch(
+            "dimensions must match: A has dims $(size(A)), B has dims $(size(B))",
+        ),
+    )
+
+    backend_A = get_backend(A)
+    backend_B = get_backend(B)
+
+    backend_A == backend_B || throw(ArgumentError("Both arrays must have the same backend"))
+
+    # Create a copy of B to avoid modifying the input
+    C = copy(B)
+
+    # Add the sparse values to C
+    _add_sparse_to_dense!(C, A)
+
+    return C
+end
+
+"""
+    +(B::DenseMatrix, A::AbstractDeviceSparseMatrix)
+
+Add a dense matrix `B` to a sparse matrix `A`, returning a dense matrix.
+This is the commutative version of `A + B`.
+"""
+Base.:+(B::DenseMatrix, A::AbstractDeviceSparseMatrix) = A + B

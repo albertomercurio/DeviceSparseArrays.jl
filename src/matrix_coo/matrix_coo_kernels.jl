@@ -127,3 +127,15 @@ end
         block_results[group_id] = sum
     end
 end
+
+# Kernel for adding sparse matrix to dense matrix (COO format)
+@kernel inbounds=true function kernel_add_sparse_to_dense_coo!(
+    C,
+    @Const(rowind),
+    @Const(colind),
+    @Const(nzval),
+)
+    i = @index(Global)
+
+    @inbounds C[rowind[i], colind[i]] += nzval[i]
+end
