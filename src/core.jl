@@ -81,14 +81,16 @@ julia> collect(C)
 ```
 """
 function Base.:+(A::AbstractDeviceSparseMatrix, B::DenseMatrix)
-    size(A) == size(B) ||
-        throw(DimensionMismatch("dimensions must match: A has dims $(size(A)), B has dims $(size(B))"))
+    size(A) == size(B) || throw(
+        DimensionMismatch(
+            "dimensions must match: A has dims $(size(A)), B has dims $(size(B))",
+        ),
+    )
 
     backend_A = get_backend(A)
     backend_B = get_backend(B)
 
-    backend_A == backend_B ||
-        throw(ArgumentError("Both arrays must have the same backend"))
+    backend_A == backend_B || throw(ArgumentError("Both arrays must have the same backend"))
 
     # Create a copy of B to avoid modifying the input
     C = copy(B)
