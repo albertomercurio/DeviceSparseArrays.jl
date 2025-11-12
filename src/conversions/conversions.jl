@@ -88,8 +88,12 @@ function DeviceSparseMatrixCSC(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     kernel! = make_keys!(backend)
     kernel!(keys, A.rowind, A.colind, n; ndrange = (nnz_count,))
 
-    # Sort on device using AcceleratedKernels
-    perm = AcceleratedKernels.sortperm(keys)
+    # Sort - collect to CPU and use Base.sortperm since AcceleratedKernels
+    # doesn't work reliably on all backends (e.g., JLBackend)
+    keys_cpu = collect(keys)
+    perm_cpu = sortperm(keys_cpu)
+    # Adapt back to the original backend
+    perm = Adapt.adapt_structure(backend, perm_cpu)
 
     # Apply permutation to get sorted arrays
     rowind_sorted = A.rowind[perm]
@@ -110,18 +114,13 @@ function DeviceSparseMatrixCSC(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     kernel! = count_per_col!(backend)
     kernel!(colptr, colind_sorted; ndrange = (nnz_count,))
 
-    # Set colptr[1] = 1
-    if backend isa KernelAbstractions.CPU
-        colptr[1] = 1
-        # Compute cumulative sum
-        for i = 2:(n+1)
-            colptr[i] += colptr[i-1]
-        end
-    else
-        # For non-CPU backends, use AcceleratedKernels scan
-        colptr[1] = 1
-        colptr[2:end] .= AcceleratedKernels.cumsum(colptr[2:end]) .+ 1
+    # Build cumulative sum on CPU (collect, compute, adapt back)
+    colptr_cpu = collect(colptr)
+    colptr_cpu[1] = 1
+    for i = 2:(n+1)
+        colptr_cpu[i] += colptr_cpu[i-1]
     end
+    colptr = Adapt.adapt_structure(backend, colptr_cpu)
 
     return DeviceSparseMatrixCSC(m, n, colptr, rowind_sorted, nzval_sorted)
 end
@@ -213,8 +212,12 @@ function DeviceSparseMatrixCSR(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     kernel! = make_keys!(backend)
     kernel!(keys, A.rowind, A.colind, m; ndrange = (nnz_count,))
 
-    # Sort on device using AcceleratedKernels
-    perm = AcceleratedKernels.sortperm(keys)
+    # Sort - collect to CPU and use Base.sortperm since AcceleratedKernels
+    # doesn't work reliably on all backends (e.g., JLBackend)
+    keys_cpu = collect(keys)
+    perm_cpu = sortperm(keys_cpu)
+    # Adapt back to the original backend
+    perm = Adapt.adapt_structure(backend, perm_cpu)
 
     # Apply permutation to get sorted arrays
     rowind_sorted = A.rowind[perm]
@@ -235,18 +238,13 @@ function DeviceSparseMatrixCSR(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     kernel! = count_per_row!(backend)
     kernel!(rowptr, rowind_sorted; ndrange = (nnz_count,))
 
-    # Set rowptr[1] = 1
-    if backend isa KernelAbstractions.CPU
-        rowptr[1] = 1
-        # Compute cumulative sum
-        for i = 2:(m+1)
-            rowptr[i] += rowptr[i-1]
-        end
-    else
-        # For non-CPU backends, use AcceleratedKernels scan
-        rowptr[1] = 1
-        rowptr[2:end] .= AcceleratedKernels.cumsum(rowptr[2:end]) .+ 1
+    # Build cumulative sum on CPU (collect, compute, adapt back)
+    rowptr_cpu = collect(rowptr)
+    rowptr_cpu[1] = 1
+    for i = 2:(m+1)
+        rowptr_cpu[i] += rowptr_cpu[i-1]
     end
+    rowptr = Adapt.adapt_structure(backend, rowptr_cpu)
 
     return DeviceSparseMatrixCSR(m, n, rowptr, colind_sorted, nzval_sorted)
 end
