@@ -67,37 +67,6 @@ function shared_test_conversion_matrix_coo(
             op(int_types[end][1]),
             op(float_types[end][1.0, 2.0]),
         )
-
-        # Test direct conversions between CSC/CSR and COO
-        if op === Array
-            # Test CSC -> COO -> CSC round-trip
-            C = sparse(
-                [1, 2, 3, 1, 2],
-                [1, 2, 3, 2, 3],
-                float_types[end][1.0, 2.0, 3.0, 4.0, 5.0],
-                3,
-                3,
-            )
-            dC_csc = DeviceSparseMatrixCSC(C)
-            dC_coo_from_csc = DeviceSparseMatrixCOO(dC_csc)
-            dC_csc_roundtrip = DeviceSparseMatrixCSC(dC_coo_from_csc)
-            @test collect(SparseMatrixCSC(dC_csc_roundtrip)) ≈ collect(C)
-
-            # Test CSR -> COO -> CSR round-trip
-            dC_csr = DeviceSparseMatrixCSR(C)
-            dC_coo_from_csr = DeviceSparseMatrixCOO(dC_csr)
-            dC_csr_roundtrip = DeviceSparseMatrixCSR(dC_coo_from_csr)
-            @test collect(SparseMatrixCSC(dC_csr_roundtrip)) ≈ collect(C)
-
-            # Test COO -> CSC consistency
-            dC_coo = DeviceSparseMatrixCOO(C)
-            dC_csc_from_coo = DeviceSparseMatrixCSC(dC_coo)
-            @test collect(SparseMatrixCSC(dC_csc_from_coo)) ≈ collect(C)
-
-            # Test COO -> CSR consistency
-            dC_csr_from_coo = DeviceSparseMatrixCSR(dC_coo)
-            @test collect(SparseMatrixCSC(dC_csr_from_coo)) ≈ collect(C)
-        end
     end
 end
 

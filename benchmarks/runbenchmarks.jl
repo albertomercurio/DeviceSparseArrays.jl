@@ -12,6 +12,7 @@ const SUITE = BenchmarkGroup()
 # Include benchmark files
 include("vector_benchmarks.jl")
 include("matrix_benchmarks.jl")
+include("conversion_benchmarks.jl")
 
 # Run benchmarks for CPU (Array)
 println("Running benchmarks for CPU (Array)...")
@@ -21,6 +22,7 @@ benchmark_matrix_vector_mul!(SUITE, Array, "Array")
 benchmark_matrix_matrix_mul!(SUITE, Array, "Array")
 benchmark_three_arg_dot!(SUITE, Array, "Array")
 benchmark_sparse_dense_add!(SUITE, Array, "Array")
+benchmark_conversions!(SUITE, Array, "Array")
 
 # Run benchmarks for JLArrays
 println("Running benchmarks for JLArrays...")
@@ -30,6 +32,7 @@ benchmark_matrix_vector_mul!(SUITE, jl, "JLArray")
 benchmark_matrix_matrix_mul!(SUITE, jl, "JLArray")
 benchmark_three_arg_dot!(SUITE, jl, "JLArray")
 benchmark_sparse_dense_add!(SUITE, jl, "JLArray")
+benchmark_conversions!(SUITE, jl, "JLArray")
 
 # Tune and run benchmarks
 println("\nTuning benchmarks...")
