@@ -120,41 +120,18 @@ function DeviceSparseMatrixCOO(A::DeviceSparseMatrixCSC{Tv,Ti}) where {Tv,Ti}
     m, n = size(A)
     nnz_count = nnz(A)
 
-    # Convert to CPU arrays for processing
-    colptr_cpu = collect(A.colptr)
-    rowval_cpu = collect(A.rowval)
-    nzval_cpu = collect(A.nzval)
-
-    # Allocate output arrays
-    rowind = Vector{Ti}(undef, nnz_count)
-    colind = Vector{Ti}(undef, nnz_count)
-    nzval = Vector{Tv}(undef, nnz_count)
-
-    # Convert CSC to COO
-    idx = 1
-    for col = 1:n
-        for j = colptr_cpu[col]:(colptr_cpu[col+1]-1)
-            rowind[idx] = rowval_cpu[j]
-            colind[idx] = Ti(col)
-            nzval[idx] = nzval_cpu[j]
-            idx += 1
-        end
-    end
-
-    # Create the result on the same backend as the input
     backend = get_backend(A.nzval)
-    if backend isa KernelAbstractions.CPU
-        return DeviceSparseMatrixCOO(m, n, rowind, colind, nzval)
-    else
-        # Adapt to the original backend
-        return DeviceSparseMatrixCOO(
-            m,
-            n,
-            Adapt.adapt_structure(backend, rowind),
-            Adapt.adapt_structure(backend, colind),
-            Adapt.adapt_structure(backend, nzval),
-        )
-    end
+
+    # Allocate output arrays on the same backend
+    rowind = similar(A.rowval, Ti, nnz_count)
+    colind = similar(A.rowval, Ti, nnz_count)
+    nzval = similar(A.nzval, Tv, nnz_count)
+
+    # Use kernel to convert CSC to COO
+    kernel! = kernel_csc_to_coo!(backend)
+    kernel!(rowind, colind, nzval, A.colptr, A.rowval, A.nzval; ndrange = (n,))
+
+    return DeviceSparseMatrixCOO(m, n, rowind, colind, nzval)
 end
 
 # Conversion from COO to SparseMatrixCSC
@@ -193,42 +170,62 @@ function DeviceSparseMatrixCSC(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     m, n = size(A)
     nnz_count = nnz(A)
 
-    # Convert to CPU arrays for processing
-    rowind_cpu = collect(A.rowind)
-    colind_cpu = collect(A.colind)
-    nzval_cpu = collect(A.nzval)
-
-    # Sort by column first, then by row
-    perm = sortperm(1:nnz_count, by = i -> (colind_cpu[i], rowind_cpu[i]))
-    rowind_sorted = rowind_cpu[perm]
-    colind_sorted = colind_cpu[perm]
-    nzval_sorted = nzval_cpu[perm]
-
-    # Build colptr
-    colptr = Vector{Ti}(undef, n + 1)
-    colptr[1] = 1
-    col_idx = 1
-    for j = 1:n
-        while col_idx <= nnz_count && colind_sorted[col_idx] == j
-            col_idx += 1
-        end
-        colptr[j+1] = col_idx
-    end
-
-    # Create the result on the same backend as the input
     backend = get_backend(A.nzval)
-    if backend isa KernelAbstractions.CPU
-        return DeviceSparseMatrixCSC(m, n, colptr, rowind_sorted, nzval_sorted)
-    else
-        # Adapt to the original backend
-        return DeviceSparseMatrixCSC(
-            m,
-            n,
-            Adapt.adapt_structure(backend, colptr),
-            Adapt.adapt_structure(backend, rowind_sorted),
-            Adapt.adapt_structure(backend, nzval_sorted),
-        )
+
+    # Create keys for sorting: column first, then row
+    # We use n * rowind + colind to create a unique sortable key
+    keys = similar(A.rowind, Ti, nnz_count)
+
+    # Create keys on device
+    @kernel inbounds=true function make_keys!(
+        keys,
+        @Const(rowind),
+        @Const(colind),
+        @Const(n)
+    )
+        i = @index(Global)
+        keys[i] = colind[i] * n + rowind[i]
     end
+
+    kernel! = make_keys!(backend)
+    kernel!(keys, A.rowind, A.colind, n; ndrange = (nnz_count,))
+
+    # Sort on device using AcceleratedKernels
+    perm = AcceleratedKernels.sortperm(keys)
+
+    # Apply permutation to get sorted arrays
+    rowind_sorted = A.rowind[perm]
+    colind_sorted = A.colind[perm]
+    nzval_sorted = A.nzval[perm]
+
+    # Build colptr on device using a histogram approach
+    colptr = similar(A.colind, Ti, n + 1)
+    fill!(colptr, zero(Ti))
+
+    # Count entries per column
+    @kernel inbounds=true function count_per_col!(colptr, @Const(colind_sorted))
+        i = @index(Global)
+        col = colind_sorted[i]
+        @atomic colptr[col+1] += 1
+    end
+
+    kernel! = count_per_col!(backend)
+    kernel!(colptr, colind_sorted; ndrange = (nnz_count,))
+
+    # Set colptr[1] = 1
+    if backend isa KernelAbstractions.CPU
+        colptr[1] = 1
+        # Compute cumulative sum
+        for i = 2:(n+1)
+            colptr[i] += colptr[i-1]
+        end
+    else
+        # For non-CPU backends, use AcceleratedKernels scan
+        colptr[1] = 1
+        colptr[2:end] .= AcceleratedKernels.cumsum(colptr[2:end]) .+ 1
+    end
+
+    return DeviceSparseMatrixCSC(m, n, colptr, rowind_sorted, nzval_sorted)
 end
 
 # Conversion from DeviceSparseMatrixCOO to DeviceSparseMatrixCSR
@@ -257,42 +254,62 @@ function DeviceSparseMatrixCSR(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     m, n = size(A)
     nnz_count = nnz(A)
 
-    # Convert to CPU arrays for processing
-    rowind_cpu = collect(A.rowind)
-    colind_cpu = collect(A.colind)
-    nzval_cpu = collect(A.nzval)
-
-    # Sort by row first, then by column
-    perm = sortperm(1:nnz_count, by = i -> (rowind_cpu[i], colind_cpu[i]))
-    rowind_sorted = rowind_cpu[perm]
-    colind_sorted = colind_cpu[perm]
-    nzval_sorted = nzval_cpu[perm]
-
-    # Build rowptr
-    rowptr = Vector{Ti}(undef, m + 1)
-    rowptr[1] = 1
-    row_idx = 1
-    for i = 1:m
-        while row_idx <= nnz_count && rowind_sorted[row_idx] == i
-            row_idx += 1
-        end
-        rowptr[i+1] = row_idx
-    end
-
-    # Create the result on the same backend as the input
     backend = get_backend(A.nzval)
-    if backend isa KernelAbstractions.CPU
-        return DeviceSparseMatrixCSR(m, n, rowptr, colind_sorted, nzval_sorted)
-    else
-        # Adapt to the original backend
-        return DeviceSparseMatrixCSR(
-            m,
-            n,
-            Adapt.adapt_structure(backend, rowptr),
-            Adapt.adapt_structure(backend, colind_sorted),
-            Adapt.adapt_structure(backend, nzval_sorted),
-        )
+
+    # Create keys for sorting: row first, then column
+    # We use m * colind + rowind to create a unique sortable key
+    keys = similar(A.rowind, Ti, nnz_count)
+
+    # Create keys on device
+    @kernel inbounds=true function make_keys!(
+        keys,
+        @Const(rowind),
+        @Const(colind),
+        @Const(m)
+    )
+        i = @index(Global)
+        keys[i] = rowind[i] * m + colind[i]
     end
+
+    kernel! = make_keys!(backend)
+    kernel!(keys, A.rowind, A.colind, m; ndrange = (nnz_count,))
+
+    # Sort on device using AcceleratedKernels
+    perm = AcceleratedKernels.sortperm(keys)
+
+    # Apply permutation to get sorted arrays
+    rowind_sorted = A.rowind[perm]
+    colind_sorted = A.colind[perm]
+    nzval_sorted = A.nzval[perm]
+
+    # Build rowptr on device using a histogram approach
+    rowptr = similar(A.rowind, Ti, m + 1)
+    fill!(rowptr, zero(Ti))
+
+    # Count entries per row
+    @kernel inbounds=true function count_per_row!(rowptr, @Const(rowind_sorted))
+        i = @index(Global)
+        row = rowind_sorted[i]
+        @atomic rowptr[row+1] += 1
+    end
+
+    kernel! = count_per_row!(backend)
+    kernel!(rowptr, rowind_sorted; ndrange = (nnz_count,))
+
+    # Set rowptr[1] = 1
+    if backend isa KernelAbstractions.CPU
+        rowptr[1] = 1
+        # Compute cumulative sum
+        for i = 2:(m+1)
+            rowptr[i] += rowptr[i-1]
+        end
+    else
+        # For non-CPU backends, use AcceleratedKernels scan
+        rowptr[1] = 1
+        rowptr[2:end] .= AcceleratedKernels.cumsum(rowptr[2:end]) .+ 1
+    end
+
+    return DeviceSparseMatrixCSR(m, n, rowptr, colind_sorted, nzval_sorted)
 end
 
 # Conversion from DeviceSparseMatrixCSR to DeviceSparseMatrixCOO
@@ -320,41 +337,18 @@ function DeviceSparseMatrixCOO(A::DeviceSparseMatrixCSR{Tv,Ti}) where {Tv,Ti}
     m, n = size(A)
     nnz_count = nnz(A)
 
-    # Convert to CPU arrays for processing
-    rowptr_cpu = collect(A.rowptr)
-    colval_cpu = collect(A.colval)
-    nzval_cpu = collect(A.nzval)
-
-    # Allocate output arrays
-    rowind = Vector{Ti}(undef, nnz_count)
-    colind = Vector{Ti}(undef, nnz_count)
-    nzval = Vector{Tv}(undef, nnz_count)
-
-    # Convert CSR to COO
-    idx = 1
-    for row = 1:m
-        for j = rowptr_cpu[row]:(rowptr_cpu[row+1]-1)
-            rowind[idx] = Ti(row)
-            colind[idx] = colval_cpu[j]
-            nzval[idx] = nzval_cpu[j]
-            idx += 1
-        end
-    end
-
-    # Create the result on the same backend as the input
     backend = get_backend(A.nzval)
-    if backend isa KernelAbstractions.CPU
-        return DeviceSparseMatrixCOO(m, n, rowind, colind, nzval)
-    else
-        # Adapt to the original backend
-        return DeviceSparseMatrixCOO(
-            m,
-            n,
-            Adapt.adapt_structure(backend, rowind),
-            Adapt.adapt_structure(backend, colind),
-            Adapt.adapt_structure(backend, nzval),
-        )
-    end
+
+    # Allocate output arrays on the same backend
+    rowind = similar(A.colval, Ti, nnz_count)
+    colind = similar(A.colval, Ti, nnz_count)
+    nzval = similar(A.nzval, Tv, nnz_count)
+
+    # Use kernel to convert CSR to COO
+    kernel! = kernel_csr_to_coo!(backend)
+    kernel!(rowind, colind, nzval, A.rowptr, A.colval, A.nzval; ndrange = (m,))
+
+    return DeviceSparseMatrixCOO(m, n, rowind, colind, nzval)
 end
 
 Adapt.adapt_structure(to, A::DeviceSparseMatrixCOO) = DeviceSparseMatrixCOO(
