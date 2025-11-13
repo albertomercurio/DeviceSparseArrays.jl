@@ -4,10 +4,14 @@ using SparseArrays
 using DeviceSparseArrays
 using Adapt
 using JLArrays
+using KernelAbstractions
 
 BLAS.set_num_threads(2)
 
 const SUITE = BenchmarkGroup()
+
+# Include utility functions
+include("benchmark_utils.jl")
 
 # Include benchmark files
 include("vector_benchmarks.jl")

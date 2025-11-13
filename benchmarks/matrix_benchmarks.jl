@@ -37,14 +37,20 @@ function benchmark_matrix_vector_mul!(
     x_vec = adapt(array_constructor, randn(T, N))
 
     # Level 3: Format (CSC, CSR, COO - will be plotted together)
-    SUITE["Matrix-Vector Multiplication"][array_type_name]["CSC"] =
-        @benchmarkable mul!($vec, $dsm_csc, $x_vec)
+    SUITE["Matrix-Vector Multiplication"][array_type_name]["CSC"] = @benchmarkable begin
+        mul!($vec, $dsm_csc, $x_vec)
+        _synchronize_backend($dsm_csc)
+    end
 
-    SUITE["Matrix-Vector Multiplication"][array_type_name]["CSR"] =
-        @benchmarkable mul!($vec, $dsm_csr, $x_vec)
+    SUITE["Matrix-Vector Multiplication"][array_type_name]["CSR"] = @benchmarkable begin
+        mul!($vec, $dsm_csr, $x_vec)
+        _synchronize_backend($dsm_csr)
+    end
 
-    SUITE["Matrix-Vector Multiplication"][array_type_name]["COO"] =
-        @benchmarkable mul!($vec, $dsm_coo, $x_vec)
+    SUITE["Matrix-Vector Multiplication"][array_type_name]["COO"] = @benchmarkable begin
+        mul!($vec, $dsm_coo, $x_vec)
+        _synchronize_backend($dsm_coo)
+    end
 
     return nothing
 end
@@ -91,14 +97,20 @@ function benchmark_matrix_matrix_mul!(
     result_mat = adapt(array_constructor, zeros(T, N, M))
 
     # Level 3: Format (CSC, CSR, COO - will be plotted together)
-    SUITE["Matrix-Matrix Multiplication"][array_type_name]["CSC"] =
-        @benchmarkable mul!($result_mat, $dsm_csc, $mat)
+    SUITE["Matrix-Matrix Multiplication"][array_type_name]["CSC"] = @benchmarkable begin
+        mul!($result_mat, $dsm_csc, $mat)
+        _synchronize_backend($dsm_csc)
+    end
 
-    SUITE["Matrix-Matrix Multiplication"][array_type_name]["CSR"] =
-        @benchmarkable mul!($result_mat, $dsm_csr, $mat)
+    SUITE["Matrix-Matrix Multiplication"][array_type_name]["CSR"] = @benchmarkable begin
+        mul!($result_mat, $dsm_csr, $mat)
+        _synchronize_backend($dsm_csr)
+    end
 
-    SUITE["Matrix-Matrix Multiplication"][array_type_name]["COO"] =
-        @benchmarkable mul!($result_mat, $dsm_coo, $mat)
+    SUITE["Matrix-Matrix Multiplication"][array_type_name]["COO"] = @benchmarkable begin
+        mul!($result_mat, $dsm_coo, $mat)
+        _synchronize_backend($dsm_coo)
+    end
 
     return nothing
 end
@@ -142,14 +154,20 @@ function benchmark_three_arg_dot!(
     y_vec = adapt(array_constructor, randn(T, N))
 
     # Level 3: Format (CSC, CSR, COO - will be plotted together)
-    SUITE["Three-argument dot"][array_type_name]["CSC"] =
-        @benchmarkable dot($x_vec, $dsm_csc, $y_vec)
+    SUITE["Three-argument dot"][array_type_name]["CSC"] = @benchmarkable begin
+        dot($x_vec, $dsm_csc, $y_vec)
+        _synchronize_backend($dsm_csc)
+    end
 
-    SUITE["Three-argument dot"][array_type_name]["CSR"] =
-        @benchmarkable dot($x_vec, $dsm_csr, $y_vec)
+    SUITE["Three-argument dot"][array_type_name]["CSR"] = @benchmarkable begin
+        dot($x_vec, $dsm_csr, $y_vec)
+        _synchronize_backend($dsm_csr)
+    end
 
-    SUITE["Three-argument dot"][array_type_name]["COO"] =
-        @benchmarkable dot($x_vec, $dsm_coo, $y_vec)
+    SUITE["Three-argument dot"][array_type_name]["COO"] = @benchmarkable begin
+        dot($x_vec, $dsm_coo, $y_vec)
+        _synchronize_backend($dsm_coo)
+    end
 
     return nothing
 end
@@ -192,14 +210,20 @@ function benchmark_sparse_dense_add!(
     dense_mat = adapt(array_constructor, randn(T, N, N))
 
     # Level 3: Format (CSC, CSR, COO - will be plotted together)
-    SUITE["Sparse + Dense Addition"][array_type_name]["CSC"] =
-        @benchmarkable $dsm_csc + $dense_mat
+    SUITE["Sparse + Dense Addition"][array_type_name]["CSC"] = @benchmarkable begin
+        $dsm_csc + $dense_mat
+        _synchronize_backend($dsm_csc)
+    end
 
-    SUITE["Sparse + Dense Addition"][array_type_name]["CSR"] =
-        @benchmarkable $dsm_csr + $dense_mat
+    SUITE["Sparse + Dense Addition"][array_type_name]["CSR"] = @benchmarkable begin
+        $dsm_csr + $dense_mat
+        _synchronize_backend($dsm_csr)
+    end
 
-    SUITE["Sparse + Dense Addition"][array_type_name]["COO"] =
-        @benchmarkable $dsm_coo + $dense_mat
+    SUITE["Sparse + Dense Addition"][array_type_name]["COO"] = @benchmarkable begin
+        $dsm_coo + $dense_mat
+        _synchronize_backend($dsm_coo)
+    end
 
     return nothing
 end

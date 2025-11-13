@@ -33,20 +33,28 @@ function benchmark_conversions!(
     dsm_coo = adapt(array_constructor, sm_coo)
 
     # CSC → COO conversion
-    SUITE["Format Conversions"][array_type_name]["CSC → COO"] =
-        @benchmarkable DeviceSparseMatrixCOO($dsm_csc)
+    SUITE["Format Conversions"][array_type_name]["CSC → COO"] = @benchmarkable begin
+        DeviceSparseMatrixCOO($dsm_csc)
+        _synchronize_backend($dsm_csc)
+    end
 
     # COO → CSC conversion
-    SUITE["Format Conversions"][array_type_name]["COO → CSC"] =
-        @benchmarkable DeviceSparseMatrixCSC($dsm_coo)
+    SUITE["Format Conversions"][array_type_name]["COO → CSC"] = @benchmarkable begin
+        DeviceSparseMatrixCSC($dsm_coo)
+        _synchronize_backend($dsm_coo)
+    end
 
     # CSR → COO conversion
-    SUITE["Format Conversions"][array_type_name]["CSR → COO"] =
-        @benchmarkable DeviceSparseMatrixCOO($dsm_csr)
+    SUITE["Format Conversions"][array_type_name]["CSR → COO"] = @benchmarkable begin
+        DeviceSparseMatrixCOO($dsm_csr)
+        _synchronize_backend($dsm_csr)
+    end
 
     # COO → CSR conversion
-    SUITE["Format Conversions"][array_type_name]["COO → CSR"] =
-        @benchmarkable DeviceSparseMatrixCSR($dsm_coo)
+    SUITE["Format Conversions"][array_type_name]["COO → CSR"] = @benchmarkable begin
+        DeviceSparseMatrixCSR($dsm_coo)
+        _synchronize_backend($dsm_coo)
+    end
 
     return nothing
 end
