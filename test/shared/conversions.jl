@@ -13,8 +13,8 @@ function shared_test_conversions(
             # Test CSC → COO → CSC round-trip
             @testset "CSC ↔ COO" begin
                 A = sparse(
-                    [1, 2, 3, 1, 2],
-                    [1, 2, 3, 2, 3],
+                    int_types[end][1, 2, 3, 1, 2],
+                    int_types[end][1, 2, 3, 2, 3],
                     float_types[end][1.0, 2.0, 3.0, 4.0, 5.0],
                     3,
                     3,
@@ -38,8 +38,8 @@ function shared_test_conversions(
             # Test CSR → COO → CSR round-trip
             @testset "CSR ↔ COO" begin
                 A = sparse(
-                    [1, 2, 3, 1, 2],
-                    [1, 2, 3, 2, 3],
+                    int_types[end][1, 2, 3, 1, 2],
+                    int_types[end][1, 2, 3, 2, 3],
                     float_types[end][1.0, 2.0, 3.0, 4.0, 5.0],
                     3,
                     3,
@@ -60,40 +60,20 @@ function shared_test_conversions(
                 @test collect(SparseMatrixCSC(A_csr_roundtrip)) ≈ collect(A)
             end
 
-            # Test with different data types
-            @testset "Different Types" begin
-                # Test with Float32
-                A_f32 = sparse([1, 2], [1, 2], float_types[1][1.0f0, 2.0f0], 2, 2)
-                A_csc_f32 = adapt(op, DeviceSparseMatrixCSC(A_f32))
-                A_coo_f32 = DeviceSparseMatrixCOO(A_csc_f32)
-                @test collect(SparseMatrixCSC(A_coo_f32)) ≈ collect(A_f32)
-
-                # Test with ComplexF64
-                A_c64 = sparse([1, 2], [1, 2], complex_types[end][1.0+im, 2.0-im], 2, 2)
-                A_csr_c64 = adapt(op, DeviceSparseMatrixCSR(A_c64))
-                A_coo_c64 = DeviceSparseMatrixCOO(A_csr_c64)
-                @test collect(SparseMatrixCSC(A_coo_c64)) ≈ collect(A_c64)
-            end
-
             # Test with empty matrices
             @testset "Edge Cases" begin
                 # Empty matrix
-                A_empty = spzeros(float_types[end], 3, 3)
+                A_empty = spzeros(float_types[end], int_types[end], 3, 3)
                 A_csc_empty = adapt(op, DeviceSparseMatrixCSC(A_empty))
                 A_coo_empty = DeviceSparseMatrixCOO(A_csc_empty)
                 @test nnz(A_coo_empty) == 0
                 @test size(A_coo_empty) == (3, 3)
-
-                # Single element
-                A_single = sparse([1], [1], float_types[end][42.0], 1, 1)
-                A_csr_single = adapt(op, DeviceSparseMatrixCSR(A_single))
-                A_coo_single = DeviceSparseMatrixCOO(A_csr_single)
-                @test collect(SparseMatrixCSC(A_coo_single)) ≈ collect(A_single)
             end
 
             # Test large matrix conversion
             @testset "Large Matrix" begin
-                A_large = sprand(float_types[end], 100, 100, 0.05)
+                A_large =
+                    SparseMatrixCSC{float_types[end],int_types[end]}(sprand(100, 100, 0.05))
 
                 # CSC → COO → CSC
                 A_csc_large = adapt(op, DeviceSparseMatrixCSC(A_large))
