@@ -5,32 +5,35 @@ Synchronize the backend associated with array `arr` to ensure all operations
 have completed before benchmarking continues. This is essential for accurate
 GPU timing.
 
-# Details
-- For arrays that support `KernelAbstractions.get_backend`, synchronizes the backend
-- For CPU arrays and arrays without KernelAbstractions support, this is a no-op
-- Safe to use with any array type; handles cases where `get_backend` is not defined
+# Implementation
+This function uses multiple dispatch to handle different array types:
+- For arrays with KernelAbstractions backends, it calls `synchronize` on the backend
+- For other array types, it is a no-op (fallback method)
+- New array types can extend this function by adding methods for specific types
 
 # Examples
 ```julia
-# GPU array - will synchronize
+# GPU array with KernelAbstractions - will synchronize
 gpu_arr = adapt(CuArray, DeviceSparseVector(...))
 _synchronize_backend(gpu_arr)
 
-# CPU array - no-op
+# CPU array or arrays without KernelAbstractions - no-op
 cpu_arr = DeviceSparseVector(...)
 _synchronize_backend(cpu_arr)
+
+# Extend for custom array types:
+# _synchronize_backend(arr::MyCustomArray) = my_custom_sync(arr)
 ```
 """
-function _synchronize_backend(arr)
-    # Try to get the backend and synchronize it
-    # This is a no-op for CPU backends and safe for all array types
-    try
-        backend = KernelAbstractions.get_backend(arr)
-        KernelAbstractions.synchronize(backend)
-    catch
-        # If get_backend is not defined or synchronize fails,
-        # just continue (e.g., for CPU arrays or non-KA arrays)
-        nothing
-    end
+_synchronize_backend(arr) = nothing  # Fallback: no-op for arrays without KernelAbstractions
+
+"""
+    _synchronize_backend(arr::AbstractDeviceSparseArray)
+
+Synchronize KernelAbstractions backend for DeviceSparseArray types.
+"""
+function _synchronize_backend(arr::AbstractDeviceSparseArray)
+    backend = KernelAbstractions.get_backend(arr)
+    KernelAbstractions.synchronize(backend)
     return nothing
 end
