@@ -6,8 +6,10 @@ This directory contains benchmark tracking for the DeviceSparseArrays.jl package
 
 - `Project.toml`: Dependencies for running benchmarks
 - `runbenchmarks.jl`: Main script that runs all benchmarks
+- `benchmark_utils.jl`: Utility functions for benchmarking (synchronization helpers)
 - `vector_benchmarks.jl`: Benchmarks for sparse vector operations
 - `matrix_benchmarks.jl`: Benchmarks for sparse matrix operations
+- `conversion_benchmarks.jl`: Benchmarks for format conversion operations
 
 ## Benchmarks Tracked
 
@@ -23,6 +25,11 @@ All matrix operations are benchmarked for CSC, CSR, and COO formats to compare t
 - **Matrix-Vector Multiplication**: `mul!(y, A, x)` for sparse matrix A and dense vectors x, y
 - **Matrix-Matrix Multiplication**: `mul!(C, A, B)` for sparse matrix A and dense matrix B
 - **Three-argument dot**: `dot(x, A, y)` for sparse matrix A and dense vectors x, y
+- **Sparse + Dense Addition**: `A + B` for sparse matrix A and dense matrix B
+
+### Format Conversions
+- **CSC ↔ COO**: Conversions between Compressed Sparse Column and Coordinate formats
+- **CSR ↔ COO**: Conversions between Compressed Sparse Row and Coordinate formats
 
 ## Array Types
 
@@ -88,8 +95,11 @@ To add new benchmarks:
            SUITE[group_name] = BenchmarkGroup()
        end
        
-       SUITE[group_name]["Test Case [$array_type_name]"] = 
-           @benchmarkable operation($adapted_data)
+       # IMPORTANT: Wrap operations with synchronization for accurate GPU timing
+       SUITE[group_name]["Test Case [$array_type_name]"] = @benchmarkable begin
+           operation($adapted_data)
+           _synchronize_backend($adapted_data)
+       end
        
        return nothing
    end
@@ -97,11 +107,34 @@ To add new benchmarks:
 3. Call your function in `runbenchmarks.jl` for each array type
 4. Test locally with `make benchmark`
 
+## GPU Synchronization
+
+All benchmarks include backend synchronization to ensure accurate timing on GPU backends. GPU operations are often asynchronous, meaning they may return before the computation completes. Without synchronization, benchmarks would underestimate the actual execution time.
+
+The `_synchronize_backend(arr)` helper function:
+- Calls `KernelAbstractions.synchronize(get_backend(arr))` for arrays supporting KernelAbstractions
+- Is a no-op for CPU arrays and arrays without KernelAbstractions support
+- Safely handles any array type, even those without `get_backend` defined
+
+This approach works for:
+- **CPU arrays**: No synchronization needed (no-op)
+- **GPU arrays with KernelAbstractions**: Proper synchronization
+- **Other array types**: Gracefully degrades to no-op
+
+All benchmarks follow the pattern:
+```julia
+@benchmarkable begin
+    my_operation(...)
+    _synchronize_backend($some_array)
+end
+```
+
 ## Notes
 
-- Benchmarks use `BLAS.set_num_threads(1)` to ensure consistent results
-- Default parameters: N=10000, T=Float64, 5% sparsity
+- Benchmarks use `BLAS.set_num_threads(2)` to ensure consistent results
+- Default parameters: N=10000, T=Float64, 1% sparsity
 - Parameters can be customized via keyword arguments
 - Array types are detected automatically (JLArrays is optional)
 - Results are saved in JSON format compatible with github-action-benchmark
 - CUDA benchmarks are not included as GitHub Actions runners don't have GPU support
+- All benchmarks include backend synchronization for accurate GPU timing (see "GPU Synchronization" section)
