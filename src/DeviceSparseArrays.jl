@@ -44,4 +44,7 @@ include("matrix_csr/matrix_csr.jl")
 include("matrix_coo/matrix_coo_kernels.jl")
 include("matrix_coo/matrix_coo.jl")
 
+include("conversions/conversion_kernels.jl")
+include("conversions/conversions.jl")
+
 end # module
