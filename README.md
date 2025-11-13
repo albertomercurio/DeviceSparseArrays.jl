@@ -40,7 +40,7 @@ using LinearAlgebra
 A_sparse = sprand(Float64, 100, 80, 0.1)
 
 # Convert to DeviceSparseMatrixCSC (CPU by default)
-A_device = DeviceSparseMatrixCSC(A_sparse);
+A_device = DeviceSparseMatrixCSC(A_sparse)
 
 # Create a vector for matrix-vector multiplication
 b = rand(Float64, 80)
@@ -49,7 +49,7 @@ b = rand(Float64, 80)
 c = A_device * b
 
 # You can also use the in-place mul! function
-c_result = similar(b)
+c_result = similar(b, 100)
 mul!(c_result, A_device, b)
 ```
 
