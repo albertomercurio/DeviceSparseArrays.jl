@@ -34,21 +34,21 @@ function LinearAlgebra.kron(
     m_C = size(A, 1) * size(B, 1)
     n_C = size(A, 2) * size(B, 2)
     nnz_C = nnz(A) * nnz(B)
-    
+
     # Determine result types
     Tv = promote_type(Tv1, Tv2)
     Ti = promote_type(Ti1, Ti2)
-    
+
     # Check backend compatibility
     backend_A = get_backend(A)
     backend_B = get_backend(B)
     backend_A == backend_B || throw(ArgumentError("Both arrays must have the same backend"))
-    
+
     # Allocate output arrays
     rowind_C = similar(A.rowind, Ti, nnz_C)
     colind_C = similar(A.colind, Ti, nnz_C)
     nzval_C = similar(A.nzval, Tv, nnz_C)
-    
+
     # Launch kernel
     kernel! = kron_coo_kernel!(backend_A)
     kernel!(
@@ -66,7 +66,7 @@ function LinearAlgebra.kron(
         ndrange = nnz_C,
     )
     synchronize(backend_A)
-    
+
     return DeviceSparseMatrixCOO(m_C, n_C, rowind_C, colind_C, nzval_C)
 end
 
@@ -95,18 +95,15 @@ julia> nnz(C)
 4
 ```
 """
-function LinearAlgebra.kron(
-    A::AbstractDeviceSparseMatrix,
-    B::AbstractDeviceSparseMatrix,
-)
+function LinearAlgebra.kron(A::AbstractDeviceSparseMatrix, B::AbstractDeviceSparseMatrix)
     # Convert both matrices to COO format for efficient Kronecker product
     # Only convert if not already COO
     A_coo = A isa DeviceSparseMatrixCOO ? A : DeviceSparseMatrixCOO(A)
     B_coo = B isa DeviceSparseMatrixCOO ? B : DeviceSparseMatrixCOO(B)
-    
+
     # Compute Kronecker product in COO format
     C_coo = kron(A_coo, B_coo)
-    
+
     # Convert back to the same type as A
     # This preserves the format preference of the first argument
     if A isa DeviceSparseMatrixCOO

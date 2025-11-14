@@ -200,7 +200,7 @@ if GROUP in ("All", "Code-Quality")
                     op_A = transpose,
                     op_B = adjoint,
                 )
-                
+
                 @test_opt target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_kron_quality(
                     func,
                     Float64,

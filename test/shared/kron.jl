@@ -25,42 +25,42 @@ function shared_test_kron_coo(
             # Test basic Kronecker product
             A_sparse = sparse([1, 2], [1, 2], T[1, 2], 2, 2)
             B_sparse = sparse([1, 2], [1, 2], T[3, 4], 2, 2)
-            
+
             A = adapt(op, DeviceSparseMatrixCOO(A_sparse))
             B = adapt(op, DeviceSparseMatrixCOO(B_sparse))
-            
+
             C = kron(A, B)
             C_expected = kron(A_sparse, B_sparse)
-            
+
             @test size(C) == size(C_expected)
             @test nnz(C) == nnz(C_expected)
             @test SparseMatrixCSC(C) ≈ C_expected
             @test C isa DeviceSparseMatrixCOO
-            
+
             # Test with different sizes
             A_sparse = sprand(T, 3, 4, 0.5)
             B_sparse = sprand(T, 2, 3, 0.5)
-            
+
             A = adapt(op, DeviceSparseMatrixCOO(A_sparse))
             B = adapt(op, DeviceSparseMatrixCOO(B_sparse))
-            
+
             C = kron(A, B)
             C_expected = kron(A_sparse, B_sparse)
-            
+
             @test size(C) == size(C_expected)
             @test nnz(C) == nnz(C_expected)
             @test SparseMatrixCSC(C) ≈ C_expected
-            
+
             # Test with empty matrix
             A_sparse = spzeros(T, 2, 2)
             B_sparse = sparse([1], [1], T[5], 2, 2)
-            
+
             A = adapt(op, DeviceSparseMatrixCOO(A_sparse))
             B = adapt(op, DeviceSparseMatrixCOO(B_sparse))
-            
+
             C = kron(A, B)
             C_expected = kron(A_sparse, B_sparse)
-            
+
             @test size(C) == size(C_expected)
             @test nnz(C) == 0
             @test SparseMatrixCSC(C) ≈ C_expected
@@ -80,28 +80,28 @@ function shared_test_kron_csc(
             # Test basic Kronecker product
             A_sparse = sparse([1, 2], [1, 2], T[1, 2], 2, 2)
             B_sparse = sparse([1, 2], [1, 2], T[3, 4], 2, 2)
-            
+
             A = adapt(op, DeviceSparseMatrixCSC(A_sparse))
             B = adapt(op, DeviceSparseMatrixCSC(B_sparse))
-            
+
             C = kron(A, B)
             C_expected = kron(A_sparse, B_sparse)
-            
+
             @test size(C) == size(C_expected)
             @test nnz(C) == nnz(C_expected)
             @test SparseMatrixCSC(C) ≈ C_expected
             @test C isa DeviceSparseMatrixCSC
-            
+
             # Test with different sizes
             A_sparse = sprand(T, 3, 4, 0.5)
             B_sparse = sprand(T, 2, 3, 0.5)
-            
+
             A = adapt(op, DeviceSparseMatrixCSC(A_sparse))
             B = adapt(op, DeviceSparseMatrixCSC(B_sparse))
-            
+
             C = kron(A, B)
             C_expected = kron(A_sparse, B_sparse)
-            
+
             @test size(C) == size(C_expected)
             @test nnz(C) == nnz(C_expected)
             @test SparseMatrixCSC(C) ≈ C_expected
@@ -121,28 +121,28 @@ function shared_test_kron_csr(
             # Test basic Kronecker product
             A_sparse = sparse([1, 2], [1, 2], T[1, 2], 2, 2)
             B_sparse = sparse([1, 2], [1, 2], T[3, 4], 2, 2)
-            
+
             A = adapt(op, DeviceSparseMatrixCSR(DeviceSparseMatrixCOO(A_sparse)))
             B = adapt(op, DeviceSparseMatrixCSR(DeviceSparseMatrixCOO(B_sparse)))
-            
+
             C = kron(A, B)
             C_expected = kron(A_sparse, B_sparse)
-            
+
             @test size(C) == size(C_expected)
             @test nnz(C) == nnz(C_expected)
             @test Matrix(SparseMatrixCSC(C)) ≈ Matrix(C_expected)
             @test C isa DeviceSparseMatrixCSR
-            
+
             # Test with different sizes
             A_sparse = sprand(T, 3, 4, 0.5)
             B_sparse = sprand(T, 2, 3, 0.5)
-            
+
             A = adapt(op, DeviceSparseMatrixCSR(DeviceSparseMatrixCOO(A_sparse)))
             B = adapt(op, DeviceSparseMatrixCSR(DeviceSparseMatrixCOO(B_sparse)))
-            
+
             C = kron(A, B)
             C_expected = kron(A_sparse, B_sparse)
-            
+
             @test size(C) == size(C_expected)
             @test nnz(C) == nnz(C_expected)
             @test Matrix(SparseMatrixCSC(C)) ≈ Matrix(C_expected)
@@ -162,40 +162,40 @@ function shared_test_kron_mixed(
             # Test CSC × COO
             A_sparse = sprand(T, 3, 3, 0.5)
             B_sparse = sprand(T, 2, 2, 0.5)
-            
+
             A = adapt(op, DeviceSparseMatrixCSC(A_sparse))
             B = adapt(op, DeviceSparseMatrixCOO(B_sparse))
-            
+
             C = kron(A, B)
             C_expected = kron(A_sparse, B_sparse)
-            
+
             @test size(C) == size(C_expected)
             @test nnz(C) == nnz(C_expected)
             @test Matrix(SparseMatrixCSC(C)) ≈ Matrix(C_expected)
             @test C isa DeviceSparseMatrixCSC  # Result type follows first argument
-            
+
             # Test COO × CSR
             A = adapt(op, DeviceSparseMatrixCOO(A_sparse))
             B = adapt(op, DeviceSparseMatrixCSR(DeviceSparseMatrixCOO(B_sparse)))
-            
+
             C = kron(A, B)
             C_expected = kron(A_sparse, B_sparse)
-            
+
             @test size(C) == size(C_expected)
             @test nnz(C) == nnz(C_expected)
             @test Matrix(SparseMatrixCSC(C)) ≈ Matrix(C_expected)
             @test C isa DeviceSparseMatrixCOO  # Result type follows first argument
-            
+
             # Test type promotion
             A_int = sparse([1, 2], [1, 2], Int32[1, 2], 2, 2)
             B_float = sparse([1, 2], [1, 2], Float64[3.0, 4.0], 2, 2)
-            
+
             A = adapt(op, DeviceSparseMatrixCSC(A_int))
             B = adapt(op, DeviceSparseMatrixCSC(B_float))
-            
+
             C = kron(A, B)
             C_expected = kron(A_int, B_float)
-            
+
             @test eltype(C) == Float64
             @test Matrix(SparseMatrixCSC(C)) ≈ Matrix(C_expected)
         end
@@ -206,21 +206,21 @@ function shared_test_kron_quality(op, T::Type)
     # Quality test for JET
     A = sprand(T, 5, 5, 0.3)
     B = sprand(T, 3, 3, 0.4)
-    
+
     dA_coo = adapt(op, DeviceSparseMatrixCOO(A))
     dB_coo = adapt(op, DeviceSparseMatrixCOO(B))
-    
+
     dA_csc = adapt(op, DeviceSparseMatrixCSC(A))
     dB_csc = adapt(op, DeviceSparseMatrixCSC(B))
-    
+
     # Test COO kron
     C_coo = kron(dA_coo, dB_coo)
-    
+
     # Test CSC kron
     C_csc = kron(dA_csc, dB_csc)
-    
+
     # Test mixed format
     C_mixed = kron(dA_csc, dB_coo)
-    
+
     return nothing
 end
