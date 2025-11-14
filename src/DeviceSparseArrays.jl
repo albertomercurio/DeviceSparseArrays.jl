@@ -47,7 +47,4 @@ include("matrix_coo/matrix_coo.jl")
 include("conversions/conversion_kernels.jl")
 include("conversions/conversions.jl")
 
-include("kron_kernels.jl")
-include("kron.jl")
-
 end # module

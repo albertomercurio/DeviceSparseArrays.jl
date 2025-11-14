@@ -331,3 +331,72 @@ function _add_sparse_to_dense!(C::DenseMatrix, A::DeviceSparseMatrixCOO)
 
     return C
 end
+
+"""
+    kron(A::DeviceSparseMatrixCOO, B::DeviceSparseMatrixCOO)
+
+Compute the Kronecker product of two sparse matrices in COO format.
+
+The Kronecker product of two matrices `A` (size m×n) and `B` (size p×q) 
+is an (m*p)×(n*q) matrix formed by multiplying each element of `A` by the 
+entire matrix `B`.
+
+# Examples
+```jldoctest
+julia> using DeviceSparseArrays, SparseArrays
+
+julia> A = DeviceSparseMatrixCOO(sparse([1, 2], [1, 2], [1.0, 2.0], 2, 2));
+
+julia> B = DeviceSparseMatrixCOO(sparse([1, 2], [1, 2], [3.0, 4.0], 2, 2));
+
+julia> C = kron(A, B);
+
+julia> size(C)
+(4, 4)
+
+julia> nnz(C)
+4
+```
+"""
+function LinearAlgebra.kron(
+    A::DeviceSparseMatrixCOO{Tv1,Ti1},
+    B::DeviceSparseMatrixCOO{Tv2,Ti2},
+) where {Tv1,Ti1,Tv2,Ti2}
+    # Result dimensions
+    m_C = size(A, 1) * size(B, 1)
+    n_C = size(A, 2) * size(B, 2)
+    nnz_C = nnz(A) * nnz(B)
+
+    # Determine result types
+    Tv = promote_type(Tv1, Tv2)
+    Ti = promote_type(Ti1, Ti2)
+
+    # Check backend compatibility
+    backend_A = get_backend(A)
+    backend_B = get_backend(B)
+    backend_A == backend_B || throw(ArgumentError("Both arrays must have the same backend"))
+
+    # Allocate output arrays
+    rowind_C = similar(A.rowind, Ti, nnz_C)
+    colind_C = similar(A.colind, Ti, nnz_C)
+    nzval_C = similar(A.nzval, Tv, nnz_C)
+
+    # Launch kernel
+    kernel! = kernel_kron_coo!(backend_A)
+    kernel!(
+        A.rowind,
+        A.colind,
+        A.nzval,
+        B.rowind,
+        B.colind,
+        B.nzval,
+        rowind_C,
+        colind_C,
+        nzval_C,
+        size(B, 1),
+        size(B, 2);
+        ndrange = nnz_C,
+    )
+
+    return DeviceSparseMatrixCOO(m_C, n_C, rowind_C, colind_C, nzval_C)
+end

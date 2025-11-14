@@ -17,7 +17,6 @@ include(joinpath(@__DIR__, "shared", "matrix_csc.jl"))
 include(joinpath(@__DIR__, "shared", "matrix_csr.jl"))
 include(joinpath(@__DIR__, "shared", "matrix_coo.jl"))
 include(joinpath(@__DIR__, "shared", "conversions.jl"))
-include(joinpath(@__DIR__, "shared", "kron.jl"))
 
 const GROUP_LIST = ("All", "Code-Quality", "CPU", "CUDA", "Metal", "Reactant")
 const GROUP = get(ENV, "GROUP", "All")
@@ -60,13 +59,6 @@ if GROUP in ("All", "CPU")
                     (ComplexF32, ComplexF64),
                 )
                 shared_test_conversions(
-                    func,
-                    name,
-                    (Int32, Int64),
-                    (Float32, Float64),
-                    (ComplexF32, ComplexF64),
-                )
-                shared_test_kron(
                     func,
                     name,
                     (Int32, Int64),
@@ -199,15 +191,6 @@ if GROUP in ("All", "Code-Quality")
                     Float64;
                     op_A = transpose,
                     op_B = adjoint,
-                )
-
-                @test_opt target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_kron_quality(
-                    func,
-                    Float64,
-                )
-                @test_call target_modules=(@__MODULE__, DeviceSparseArrays) shared_test_kron_quality(
-                    func,
-                    Float64,
                 )
             end
         end
