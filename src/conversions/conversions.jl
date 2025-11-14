@@ -173,7 +173,7 @@ function DeviceSparseMatrixCSR(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
 
     # Create keys on device
     kernel! = kernel_make_csr_keys!(backend)
-    kernel!(keys, A.rowind, A.colind, m; ndrange = (nnz_count,))
+    kernel!(keys, A.rowind, A.colind, n; ndrange = (nnz_count,))
 
     # Sort - use AcceleratedKernels
     perm = AcceleratedKernels.sortperm(keys)

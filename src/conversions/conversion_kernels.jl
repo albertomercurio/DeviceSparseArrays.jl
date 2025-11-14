@@ -50,10 +50,10 @@ end
     keys,
     @Const(rowind),
     @Const(colind),
-    @Const(m),
+    @Const(n),
 )
     i = @index(Global)
-    keys[i] = rowind[i] * m + colind[i]
+    keys[i] = rowind[i] * n + colind[i]
 end
 
 # Kernel for counting entries per column (for COO → CSC)
