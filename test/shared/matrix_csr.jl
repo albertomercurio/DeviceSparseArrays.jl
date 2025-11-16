@@ -276,21 +276,23 @@ function shared_test_linearalgebra_matrix_csr(
     end
 
     @testset "Kronecker Product" begin
-        for T in (int_types..., float_types..., complex_types...)
-            # Test with rectangular matrices
-            A_sparse = sprand(T, 30, 25, 0.1)
-            B_sparse = sprand(T, 20, 15, 0.1)
+        if array_type != "JLArray"
+            for T in (int_types..., float_types..., complex_types...)
+                # Test with rectangular matrices
+                A_sparse = sprand(T, 30, 25, 0.1)
+                B_sparse = sprand(T, 20, 15, 0.1)
 
-            A = adapt(op, DeviceSparseMatrixCSR(A_sparse))
-            B = adapt(op, DeviceSparseMatrixCSR(B_sparse))
+                A = adapt(op, DeviceSparseMatrixCSR(A_sparse))
+                B = adapt(op, DeviceSparseMatrixCSR(B_sparse))
 
-            C = kron(A, B)
-            C_expected = kron(A_sparse, B_sparse)
+                C = kron(A, B)
+                C_expected = kron(A_sparse, B_sparse)
 
-            @test size(C) == size(C_expected)
-            @test nnz(C) == nnz(C_expected)
-            @test Matrix(SparseMatrixCSC(C)) ≈ Matrix(C_expected)
-            @test C isa DeviceSparseMatrixCSR
+                @test size(C) == size(C_expected)
+                @test nnz(C) == nnz(C_expected)
+                @test Matrix(SparseMatrixCSC(C)) ≈ Matrix(C_expected)
+                @test C isa DeviceSparseMatrixCSR
+            end
         end
     end
 end

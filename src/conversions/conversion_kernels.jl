@@ -39,10 +39,10 @@ end
     keys,
     @Const(rowind),
     @Const(colind),
-    @Const(n),
+    @Const(m),  # Number of rows - needed for proper column-major lexicographic ordering
 )
     i = @index(Global)
-    keys[i] = colind[i] * n + rowind[i]
+    keys[i] = colind[i] * m + rowind[i]
 end
 
 # Kernel for creating sort keys for COO → CSR conversion

@@ -344,10 +344,7 @@ julia> nnz(C)
 4
 ```
 """
-function LinearAlgebra.kron(
-    A::DeviceSparseMatrixCSC,
-    B::DeviceSparseMatrixCSC,
-)
+function LinearAlgebra.kron(A::DeviceSparseMatrixCSC, B::DeviceSparseMatrixCSC)
     # Convert to COO, compute kron, convert back to CSC
     A_coo = DeviceSparseMatrixCOO(A)
     B_coo = DeviceSparseMatrixCOO(B)
