@@ -32,8 +32,11 @@ _synchronize_backend(arr) = nothing  # Fallback: no-op for arrays without Kernel
 
 Synchronize KernelAbstractions backend for DeviceSparseArray types.
 """
-function _synchronize_backend(arr::AbstractDeviceSparseArray)
+_synchronize_backend(arr::AbstractDeviceSparseArray) = _synchronize_backend(nonzeros(arr))
+
+function _synchronize_backend(x::AbstractArray)
     backend = KernelAbstractions.get_backend(arr)
     KernelAbstractions.synchronize(backend)
     return nothing
 end
+_synchronize_backend(x::JLArray) = nothing  # No-op for Julia Arrays
