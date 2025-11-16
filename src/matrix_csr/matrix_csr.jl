@@ -331,3 +331,40 @@ function _add_sparse_to_dense!(C::DenseMatrix, A::DeviceSparseMatrixCSR)
 
     return C
 end
+
+"""
+    kron(A::DeviceSparseMatrixCSR, B::DeviceSparseMatrixCSR)
+
+Compute the Kronecker product of two sparse matrices in CSR format.
+
+The Kronecker product is computed by converting to COO format, computing the 
+product, and converting back to CSR format.
+
+# Examples
+```jldoctest
+julia> using DeviceSparseArrays, SparseArrays
+
+julia> A_coo = DeviceSparseMatrixCOO(sparse([1, 2], [1, 2], [1.0, 2.0], 2, 2));
+
+julia> B_coo = DeviceSparseMatrixCOO(sparse([1, 2], [1, 2], [3.0, 4.0], 2, 2));
+
+julia> A = DeviceSparseMatrixCSR(A_coo);
+
+julia> B = DeviceSparseMatrixCSR(B_coo);
+
+julia> C = kron(A, B);
+
+julia> size(C)
+(4, 4)
+
+julia> nnz(C)
+4
+```
+"""
+function LinearAlgebra.kron(A::DeviceSparseMatrixCSR, B::DeviceSparseMatrixCSR)
+    # Convert to COO, compute kron, convert back to CSR
+    A_coo = DeviceSparseMatrixCOO(A)
+    B_coo = DeviceSparseMatrixCOO(B)
+    C_coo = kron(A_coo, B_coo)
+    return DeviceSparseMatrixCSR(C_coo)
+end

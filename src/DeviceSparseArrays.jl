@@ -1,7 +1,7 @@
 module DeviceSparseArrays
 
 using LinearAlgebra
-import LinearAlgebra: wrap, copymutable_oftype, __normalize!
+import LinearAlgebra: wrap, copymutable_oftype, __normalize!, kron
 using SparseArrays
 import SparseArrays: SparseVector, SparseMatrixCSC
 import SparseArrays: getcolptr, getrowval, getnzval, nonzeroinds

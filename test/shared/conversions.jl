@@ -10,16 +10,12 @@ function shared_test_conversions(
         # which is not supported on JLBackend. Therefore, we skip conversion
         # tests for JLArray.
         if array_type != "JLArray"
+            Tv = float_types[end]
+            Ti = int_types[end]
+            A = SparseMatrixCSC{Tv,Ti}(sprand(100, 200, 0.05))
+
             # Test CSC → COO → CSC round-trip
             @testset "CSC ↔ COO" begin
-                A = sparse(
-                    int_types[end][1, 2, 3, 1, 2],
-                    int_types[end][1, 2, 3, 2, 3],
-                    float_types[end][1.0, 2.0, 3.0, 4.0, 5.0],
-                    3,
-                    3,
-                )
-
                 # CSC → COO
                 A_csc = adapt(op, DeviceSparseMatrixCSC(A))
                 A_coo_from_csc = DeviceSparseMatrixCOO(A_csc)
@@ -37,14 +33,6 @@ function shared_test_conversions(
 
             # Test CSR → COO → CSR round-trip
             @testset "CSR ↔ COO" begin
-                A = sparse(
-                    int_types[end][1, 2, 3, 1, 2],
-                    int_types[end][1, 2, 3, 2, 3],
-                    float_types[end][1.0, 2.0, 3.0, 4.0, 5.0],
-                    3,
-                    3,
-                )
-
                 # CSR → COO
                 A_csr = adapt(op, DeviceSparseMatrixCSR(A))
                 A_coo_from_csr = DeviceSparseMatrixCOO(A_csr)
@@ -63,29 +51,11 @@ function shared_test_conversions(
             # Test with empty matrices
             @testset "Edge Cases" begin
                 # Empty matrix
-                A_empty = spzeros(float_types[end], int_types[end], 3, 3)
+                A_empty = spzeros(Tv, Ti, 3, 4)
                 A_csc_empty = adapt(op, DeviceSparseMatrixCSC(A_empty))
                 A_coo_empty = DeviceSparseMatrixCOO(A_csc_empty)
                 @test nnz(A_coo_empty) == 0
-                @test size(A_coo_empty) == (3, 3)
-            end
-
-            # Test large matrix conversion
-            @testset "Large Matrix" begin
-                A_large =
-                    SparseMatrixCSC{float_types[end],int_types[end]}(sprand(100, 100, 0.05))
-
-                # CSC → COO → CSC
-                A_csc_large = adapt(op, DeviceSparseMatrixCSC(A_large))
-                A_coo_large = DeviceSparseMatrixCOO(A_csc_large)
-                A_csc_back = DeviceSparseMatrixCSC(A_coo_large)
-                @test collect(SparseMatrixCSC(A_csc_back)) ≈ collect(A_large)
-
-                # CSR → COO → CSR
-                A_csr_large = adapt(op, DeviceSparseMatrixCSR(A_large))
-                A_coo_large2 = DeviceSparseMatrixCOO(A_csr_large)
-                A_csr_back = DeviceSparseMatrixCSR(A_coo_large2)
-                @test collect(SparseMatrixCSC(A_csr_back)) ≈ collect(A_large)
+                @test size(A_coo_empty) == (3, 4)
             end
         end
     end
