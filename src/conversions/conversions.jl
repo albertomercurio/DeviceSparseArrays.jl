@@ -157,7 +157,8 @@ function DeviceSparseMatrixCSC(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     kernel! = kernel_make_csc_keys!(backend)
     kernel!(keys, A.rowind, A.colind, m; ndrange = (nnz_count,))
 
-    perm = AcceleratedKernels.sortperm(keys)
+    # Sort - use AcceleratedKernels
+    perm = _sortperm_AK(keys)
 
     # Apply permutation to get sorted arrays
     rowind_sorted = A.rowind[perm]
@@ -174,7 +175,7 @@ function DeviceSparseMatrixCSC(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
 
     # Compute cumulative sum
     allowed_setindex!(colptr, 1, 1) # TODO: Is there a better way to do this?
-    colptr[2:end] .= AcceleratedKernels.cumsum(colptr[2:end]) .+ 1
+    colptr[2:end] .= _cumsum_AK(colptr[2:end]) .+ 1
 
     return DeviceSparseMatrixCSC(m, n, colptr, rowind_sorted, nzval_sorted)
 end
@@ -215,7 +216,7 @@ function DeviceSparseMatrixCSR(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
     kernel!(keys, A.rowind, A.colind, n; ndrange = (nnz_count,))
 
     # Sort - use AcceleratedKernels
-    perm = AcceleratedKernels.sortperm(keys)
+    perm = _sortperm_AK(keys)
 
     # Apply permutation to get sorted arrays
     rowind_sorted = A.rowind[perm]
@@ -232,7 +233,7 @@ function DeviceSparseMatrixCSR(A::DeviceSparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
 
     # Compute cumulative sum
     allowed_setindex!(rowptr, 1, 1) # TODO: Is there a better way to do this?
-    rowptr[2:end] .= AcceleratedKernels.cumsum(rowptr[2:end]) .+ 1
+    rowptr[2:end] .= _cumsum_AK(rowptr[2:end]) .+ 1
 
     return DeviceSparseMatrixCSR(m, n, rowptr, colind_sorted, nzval_sorted)
 end
