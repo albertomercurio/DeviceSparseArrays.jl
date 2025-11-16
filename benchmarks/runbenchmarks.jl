@@ -38,7 +38,7 @@ benchmark_matrix_matrix_mul!(SUITE, JLArray, "JLArray")
 benchmark_three_arg_dot!(SUITE, JLArray, "JLArray")
 benchmark_sparse_dense_add!(SUITE, JLArray, "JLArray")
 benchmark_kron!(SUITE, JLArray, "JLArray")
-benchmark_conversions!(SUITE, JLArray, "JLArray")
+# benchmark_conversions!(SUITE, JLArray, "JLArray")
 
 # Tune and run benchmarks
 println("\nTuning benchmarks...")
