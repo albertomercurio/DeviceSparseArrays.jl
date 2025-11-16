@@ -34,7 +34,7 @@ struct DeviceSparseVector{
         n >= 0 || throw(ArgumentError("The number of elements must be non-negative."))
         length(nzind) == length(nzval) ||
             throw(ArgumentError("index and value vectors must be the same length"))
-        return new(Int(n), nzind, nzval)
+        return new(Int(n), copy(nzind), copy(nzval))
     end
 end
 

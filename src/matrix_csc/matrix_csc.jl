@@ -55,7 +55,7 @@ struct DeviceSparseMatrixCSC{
         length(rowval) == length(nzval) ||
             throw(ArgumentError("rowval and nzval must have same length"))
 
-        return new(Int(m), Int(n), colptr, rowval, nzval)
+        return new(Int(m), Int(n), copy(colptr), copy(rowval), copy(nzval))
     end
 end
 
@@ -75,10 +75,6 @@ function DeviceSparseMatrixCSC(
     DeviceSparseMatrixCSC{Tv2,Ti2,ColPtrT,RowValT,NzValT}(m, n, colptr, rowval, nzval)
 end
 
-DeviceSparseMatrixCSC(A::SparseMatrixCSC) =
-    DeviceSparseMatrixCSC(A.m, A.n, A.colptr, A.rowval, A.nzval)
-SparseMatrixCSC(A::DeviceSparseMatrixCSC) =
-    SparseMatrixCSC(A.m, A.n, collect(A.colptr), collect(A.rowval), collect(A.nzval))
 
 Adapt.adapt_structure(to, A::DeviceSparseMatrixCSC) = DeviceSparseMatrixCSC(
     A.m,

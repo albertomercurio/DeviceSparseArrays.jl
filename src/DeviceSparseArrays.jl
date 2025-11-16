@@ -5,6 +5,7 @@ import LinearAlgebra: wrap, copymutable_oftype, __normalize!, kron
 using SparseArrays
 import SparseArrays: SparseVector, SparseMatrixCSC
 import SparseArrays: getcolptr, getrowval, getnzval, nonzeroinds
+import SparseArrays: _show_with_braille_patterns
 
 import ArrayInterface: allowed_getindex, allowed_setindex!
 

@@ -242,13 +242,7 @@ Benchmark Kronecker product (kron) for CSC, CSR, and COO formats.
 - `N`: Size of the matrices (default: 100)
 - `T`: Element type (default: Float64)
 """
-function benchmark_kron!(
-    SUITE,
-    array_constructor,
-    array_type_name;
-    N = 100,
-    T = Float64,
-)
+function benchmark_kron!(SUITE, array_constructor, array_type_name; N = 100, T = Float64)
     # Create sparse matrices with 1% density (smaller matrices since kron grows quadratically)
     sm_a_std = sprand(T, N, N, 0.01)
     sm_b_std = sprand(T, N, N, 0.01)
@@ -256,20 +250,20 @@ function benchmark_kron!(
     # Convert to different formats
     sm_a_csc = DeviceSparseMatrixCSC(sm_a_std)
     sm_b_csc = DeviceSparseMatrixCSC(sm_b_std)
-    
+
     sm_a_csr = DeviceSparseMatrixCSR(sm_a_std)
     sm_b_csr = DeviceSparseMatrixCSR(sm_b_std)
-    
+
     sm_a_coo = DeviceSparseMatrixCOO(sm_a_std)
     sm_b_coo = DeviceSparseMatrixCOO(sm_b_std)
 
     # Adapt to device
     dsm_a_csc = adapt(array_constructor, sm_a_csc)
     dsm_b_csc = adapt(array_constructor, sm_b_csc)
-    
+
     dsm_a_csr = adapt(array_constructor, sm_a_csr)
     dsm_b_csr = adapt(array_constructor, sm_b_csr)
-    
+
     dsm_a_coo = adapt(array_constructor, sm_a_coo)
     dsm_b_coo = adapt(array_constructor, sm_b_coo)
 
@@ -291,4 +285,3 @@ function benchmark_kron!(
 
     return nothing
 end
-
