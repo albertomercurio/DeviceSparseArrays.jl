@@ -127,7 +127,7 @@ function shared_test_conversions(
         # Test edge cases
         @testset "Edge Cases" begin
             # Single element matrix
-            A_single = sparse([1], [2], [Tv(5.0)], 3, 4)
+            A_single = sparse(Ti[1], Ti[2], [Tv(5.0)], 3, 4)
             A_csc_single = adapt(op, DeviceSparseMatrixCSC(A_single))
             A_coo_single = DeviceSparseMatrixCOO(A_csc_single)
             @test nnz(A_coo_single) == 1
@@ -139,13 +139,13 @@ function shared_test_conversions(
             @test collect(SparseMatrixCSC(A_csr_single)) ≈ collect(A_single)
 
             # Full row matrix
-            A_row = sparse([1, 1, 1, 1], [1, 2, 3, 4], Tv[1, 2, 3, 4], 3, 4)
+            A_row = sparse(Ti[1, 1, 1, 1], Ti[1, 2, 3, 4], Tv[1, 2, 3, 4], 3, 4)
             A_csc_row = adapt(op, DeviceSparseMatrixCSC(A_row))
             A_csr_row = DeviceSparseMatrixCSR(A_csc_row)
             @test collect(SparseMatrixCSC(A_csr_row)) ≈ collect(A_row)
 
             # Full column matrix
-            A_col = sparse([1, 2, 3], [2, 2, 2], Tv[1, 2, 3], 3, 4)
+            A_col = sparse(Ti[1, 2, 3], Ti[2, 2, 2], Tv[1, 2, 3], 3, 4)
             A_csc_col = adapt(op, DeviceSparseMatrixCSC(A_col))
             A_csr_col = DeviceSparseMatrixCSR(A_csc_col)
             @test collect(SparseMatrixCSC(A_csr_col)) ≈ collect(A_col)
