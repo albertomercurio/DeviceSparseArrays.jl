@@ -141,7 +141,7 @@ end
 end
 
 # Kernel for computing Kronecker product in COO format
-@kernel function kernel_kron_coo!(
+@kernel inbounds=true function kernel_kron_coo!(
     @Const(rowind_A),
     @Const(colind_A),
     @Const(nzval_A),
