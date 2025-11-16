@@ -368,11 +368,15 @@ function Base.:+(A::DeviceSparseMatrixCSC, B::DeviceSparseMatrixCSC)
         ndrange = (n,),
     )
 
-    # Build colptr for result matrix
+    # Build colptr for result matrix using cumsum
+    # colptr_C[i+1] = 1 + sum(nnz_per_col[1:i])
+    cumsum_nnz = _cumsum_AK(nnz_per_col)
     colptr_C = similar(getcolptr(A), n + 1)
-    colptr_C[1] = one(Ti)
-    colptr_C[2:end] .= _cumsum_AK(nnz_per_col)
+    # Set colptr_C[2:end] to cumsum + 1
+    colptr_C[2:end] .= cumsum_nnz
     colptr_C[2:end] .+= one(Ti)
+    # Set colptr_C[1] to 1 using broadcasting
+    colptr_C[1:1] .= one(Ti)
 
     # Allocate result arrays
     nnz_total = allowed_getindex(colptr_C, n + 1) - one(Ti)

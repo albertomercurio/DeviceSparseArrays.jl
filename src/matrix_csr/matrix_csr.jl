@@ -365,11 +365,15 @@ function Base.:+(A::DeviceSparseMatrixCSR, B::DeviceSparseMatrixCSR)
         ndrange = (m,),
     )
 
-    # Build rowptr for result matrix
+    # Build rowptr for result matrix using cumsum
+    # rowptr_C[i+1] = 1 + sum(nnz_per_row[1:i])
+    cumsum_nnz = _cumsum_AK(nnz_per_row)
     rowptr_C = similar(getrowptr(A), m + 1)
-    rowptr_C[1] = one(Ti)
-    rowptr_C[2:end] .= _cumsum_AK(nnz_per_row)
+    # Set rowptr_C[2:end] to cumsum + 1
+    rowptr_C[2:end] .= cumsum_nnz
     rowptr_C[2:end] .+= one(Ti)
+    # Set rowptr_C[1] to 1 using broadcasting
+    rowptr_C[1:1] .= one(Ti)
 
     # Allocate result arrays
     nnz_total = allowed_getindex(rowptr_C, m + 1) - one(Ti)
