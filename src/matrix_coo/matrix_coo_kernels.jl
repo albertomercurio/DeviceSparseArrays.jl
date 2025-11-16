@@ -137,7 +137,7 @@ end
 )
     i = @index(Global)
 
-    @inbounds C[rowind[i], colind[i]] += nzval[i]
+    C[rowind[i], colind[i]] += nzval[i]
 end
 
 # Kernel for computing Kronecker product in COO format
