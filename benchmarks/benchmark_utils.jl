@@ -35,7 +35,7 @@ Synchronize KernelAbstractions backend for DeviceSparseArray types.
 _synchronize_backend(arr::AbstractDeviceSparseArray) = _synchronize_backend(nonzeros(arr))
 
 function _synchronize_backend(x::AbstractArray)
-    backend = KernelAbstractions.get_backend(arr)
+    backend = KernelAbstractions.get_backend(x)
     KernelAbstractions.synchronize(backend)
     return nothing
 end
