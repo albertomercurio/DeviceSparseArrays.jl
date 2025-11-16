@@ -31,14 +31,14 @@ benchmark_conversions!(SUITE, Array, "Array")
 
 # Run benchmarks for JLArrays
 println("Running benchmarks for JLArrays...")
-benchmark_vector_sum!(SUITE, JlArray, "JLArray")
-benchmark_vector_sparse_dense_dot!(SUITE, JlArray, "JLArray")
-benchmark_matrix_vector_mul!(SUITE, JlArray, "JLArray")
-benchmark_matrix_matrix_mul!(SUITE, JlArray, "JLArray")
-benchmark_three_arg_dot!(SUITE, JlArray, "JLArray")
-benchmark_sparse_dense_add!(SUITE, JlArray, "JLArray")
-benchmark_kron!(SUITE, JlArray, "JLArray")
-benchmark_conversions!(SUITE, JlArray, "JLArray")
+benchmark_vector_sum!(SUITE, JLArray, "JLArray")
+benchmark_vector_sparse_dense_dot!(SUITE, JLArray, "JLArray")
+benchmark_matrix_vector_mul!(SUITE, JLArray, "JLArray")
+benchmark_matrix_matrix_mul!(SUITE, JLArray, "JLArray")
+benchmark_three_arg_dot!(SUITE, JLArray, "JLArray")
+benchmark_sparse_dense_add!(SUITE, JLArray, "JLArray")
+benchmark_kron!(SUITE, JLArray, "JLArray")
+benchmark_conversions!(SUITE, JLArray, "JLArray")
 
 # Tune and run benchmarks
 println("\nTuning benchmarks...")
