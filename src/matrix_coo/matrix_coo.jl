@@ -329,6 +329,69 @@ function _add_sparse_to_dense!(C::DenseMatrix, A::DeviceSparseMatrixCOO)
 end
 
 """
+    +(A::DeviceSparseMatrixCOO, B::DeviceSparseMatrixCOO)
+
+Add two sparse matrices in COO format. Both matrices must have the same dimensions
+and be on the same backend (device).
+
+The result is a COO matrix with entries from both A and B concatenated. Note that
+duplicate entries (same row and column) are not combined, which is valid for COO format.
+
+# Examples
+```jldoctest
+julia> using DeviceSparseArrays, SparseArrays
+
+julia> A = DeviceSparseMatrixCOO(sparse([1, 2], [1, 2], [1.0, 2.0], 2, 2));
+
+julia> B = DeviceSparseMatrixCOO(sparse([1, 2], [2, 1], [3.0, 4.0], 2, 2));
+
+julia> C = A + B;
+
+julia> collect(C)
+2×2 Matrix{Float64}:
+ 1.0  3.0
+ 4.0  2.0
+```
+"""
+function Base.:+(A::DeviceSparseMatrixCOO, B::DeviceSparseMatrixCOO)
+    size(A) == size(B) || throw(
+        DimensionMismatch(
+            "dimensions must match: A has dims $(size(A)), B has dims $(size(B))",
+        ),
+    )
+
+    backend_A = get_backend(A)
+    backend_B = get_backend(B)
+    backend_A == backend_B ||
+        throw(ArgumentError("Both matrices must have the same backend"))
+
+    m, n = size(A)
+    Tv = promote_type(eltype(nonzeros(A)), eltype(nonzeros(B)))
+
+    # Concatenate the coordinate arrays
+    nnz_A = nnz(A)
+    nnz_B = nnz(B)
+    nnz_total = nnz_A + nnz_B
+
+    # Allocate result arrays
+    rowind_C = similar(getrowind(A), nnz_total)
+    colind_C = similar(getcolind(A), nnz_total)
+    nzval_C = similar(nonzeros(A), Tv, nnz_total)
+
+    # Copy entries from A
+    rowind_C[1:nnz_A] .= getrowind(A)
+    colind_C[1:nnz_A] .= getcolind(A)
+    nzval_C[1:nnz_A] .= nonzeros(A)
+
+    # Copy entries from B
+    rowind_C[(nnz_A+1):end] .= getrowind(B)
+    colind_C[(nnz_A+1):end] .= getcolind(B)
+    nzval_C[(nnz_A+1):end] .= nonzeros(B)
+
+    return DeviceSparseMatrixCOO(m, n, rowind_C, colind_C, nzval_C)
+end
+
+"""
     kron(A::DeviceSparseMatrixCOO, B::DeviceSparseMatrixCOO)
 
 Compute the Kronecker product of two sparse matrices in COO format.
