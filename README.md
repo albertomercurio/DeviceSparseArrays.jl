@@ -56,6 +56,8 @@ mul!(c_result, A_device, b)
 ### GPU Backend Usage
 
 ```julia
+using Adapt
+
 # For CUDA backend
 using CUDA
 A_cuda = adapt(CuArray, A_device)

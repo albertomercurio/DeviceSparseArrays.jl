@@ -70,7 +70,13 @@ function DeviceSparseMatrixCOO(
 } where {Ti<:Integer,Tv}
     Ti2 = _get_eltype(rowind)
     Tv2 = _get_eltype(nzval)
-    DeviceSparseMatrixCOO{Tv2,Ti2,RowIndT,ColIndT,NzValT}(m, n, rowind, colind, nzval)
+    DeviceSparseMatrixCOO{Tv2,Ti2,RowIndT,ColIndT,NzValT}(
+        m,
+        n,
+        copy(rowind),
+        copy(colind),
+        copy(nzval),
+    )
 end
 
 # Conversion from SparseMatrixCSC to COO
@@ -93,16 +99,6 @@ function DeviceSparseMatrixCOO(A::SparseMatrixCSC{Tv,Ti}) where {Tv,Ti}
     end
 
     return DeviceSparseMatrixCOO(m, n, rowind, colind, nzval)
-end
-
-# Conversion from COO to SparseMatrixCSC
-function SparseMatrixCSC(A::DeviceSparseMatrixCOO)
-    m, n = size(A)
-    rowind = collect(A.rowind)
-    colind = collect(A.colind)
-    nzval = collect(A.nzval)
-
-    return sparse(rowind, colind, nzval, m, n)
 end
 
 Adapt.adapt_structure(to, A::DeviceSparseMatrixCOO) = DeviceSparseMatrixCOO(
