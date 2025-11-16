@@ -15,6 +15,12 @@ const AbstractDeviceSparseMatrix{Tv,Ti} = AbstractDeviceSparseArray{Tv,Ti,2}
 const AbstractDeviceSparseVecOrMat{Tv,Ti} =
     Union{AbstractDeviceSparseVector{Tv,Ti},AbstractDeviceSparseMatrix{Tv,Ti}}
 
+const AbstractDeviceSparseMatrixInclAdjointAndTranspose = Union{
+    AbstractDeviceSparseMatrix,
+    Adjoint{<:Any,<:AbstractDeviceSparseMatrix},
+    Transpose{<:Any,<:AbstractDeviceSparseMatrix},
+}
+
 Base.sum(A::AbstractDeviceSparseArray) = sum(nonzeros(A))
 
 function LinearAlgebra.rmul!(A::AbstractDeviceSparseArray, x::Number)
@@ -43,43 +49,17 @@ end
 
 KernelAbstractions.get_backend(A::AbstractDeviceSparseArray) = get_backend(nonzeros(A))
 
-trans_adj_wrappers(fmt) = (
-    (T -> :($fmt{$T}), false, false, identity, T -> :($T)),
-    (T -> :(Transpose{$T,<:$fmt{$T}}), true, false, A -> :(parent($A)), T -> :($T<:Real)),
-    (
-        T -> :(Transpose{$T,<:$fmt{$T}}),
-        true,
-        false,
-        A -> :(parent($A)),
-        T -> :($T<:Complex),
-    ),
-    (T -> :(Adjoint{$T,<:$fmt{$T}}), true, true, A -> :(parent($A)), T -> :($T)),
-)
+# called by `show(io, MIME("text/plain"), ::AbstractDeviceSparseMatrixInclAdjointAndTranspose)`
+function Base.print_array(io::IO, A::AbstractDeviceSparseMatrixInclAdjointAndTranspose)
+    S = SparseMatrixCSC(A)
+    if max(size(S)...) < 16
+        Base.print_matrix(io, S)
+    else
+        _show_with_braille_patterns(io, S)
+    end
+end
 
 # Generic addition between AbstractDeviceSparseMatrix and DenseMatrix
-"""
-    +(A::AbstractDeviceSparseMatrix, B::DenseMatrix)
-
-Add a sparse matrix `A` to a dense matrix `B`, returning a dense matrix.
-All backends must be compatible.
-
-# Examples
-```jldoctest
-julia> using DeviceSparseArrays, SparseArrays
-
-julia> A = DeviceSparseMatrixCSC(sparse([1, 2], [1, 2], [1.0, 2.0], 3, 3));
-
-julia> B = ones(3, 3);
-
-julia> C = A + B;
-
-julia> collect(C)
-3×3 Matrix{Float64}:
- 2.0  1.0  1.0
- 1.0  3.0  1.0
- 1.0  1.0  1.0
-```
-"""
 function Base.:+(A::AbstractDeviceSparseMatrix, B::DenseMatrix)
     size(A) == size(B) || throw(
         DimensionMismatch(
@@ -101,10 +81,18 @@ function Base.:+(A::AbstractDeviceSparseMatrix, B::DenseMatrix)
     return C
 end
 
-"""
-    +(B::DenseMatrix, A::AbstractDeviceSparseMatrix)
-
-Add a dense matrix `B` to a sparse matrix `A`, returning a dense matrix.
-This is the commutative version of `A + B`.
-"""
 Base.:+(B::DenseMatrix, A::AbstractDeviceSparseMatrix) = A + B
+
+# Keep this at the end of the file
+trans_adj_wrappers(fmt) = (
+    (T -> :($fmt{$T}), false, false, identity, T -> :($T)),
+    (T -> :(Transpose{$T,<:$fmt{$T}}), true, false, A -> :(parent($A)), T -> :($T<:Real)),
+    (
+        T -> :(Transpose{$T,<:$fmt{$T}}),
+        true,
+        false,
+        A -> :(parent($A)),
+        T -> :($T<:Complex),
+    ),
+    (T -> :(Adjoint{$T,<:$fmt{$T}}), true, true, A -> :(parent($A)), T -> :($T)),
+)

@@ -12,15 +12,18 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [weakdeps]
+JLArrays = "27aeb0d3-9eb9-45fb-866b-73c2ecf80fcb"
 Reactant = "3c362404-f566-11ee-1572-e11a4b42c853"
 
 [extensions]
+DeviceSparseArraysJLArraysExt = "JLArrays"
 DeviceSparseArraysReactantExt = "Reactant"
 
 [compat]
 AcceleratedKernels = "0.4"
 Adapt = "4"
 ArrayInterface = "7"
+JLArrays = "0.3"
 KernelAbstractions = "0.9"
 LinearAlgebra = "1"
 Reactant = "0.2.164"

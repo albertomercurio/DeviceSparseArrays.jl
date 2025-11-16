@@ -55,7 +55,7 @@ struct DeviceSparseMatrixCSR{
         length(colval) == length(nzval) ||
             throw(ArgumentError("colval and nzval must have same length"))
 
-        return new(Int(m), Int(n), rowptr, colval, nzval)
+        return new(Int(m), Int(n), copy(rowptr), copy(colval), copy(nzval))
     end
 end
 
@@ -73,26 +73,6 @@ function DeviceSparseMatrixCSR(
     Ti2 = _get_eltype(rowptr)
     Tv2 = _get_eltype(nzval)
     DeviceSparseMatrixCSR{Tv2,Ti2,RowPtrT,ColValT,NzValT}(m, n, rowptr, colval, nzval)
-end
-
-function DeviceSparseMatrixCSR(A::Transpose{Tv,<:SparseMatrixCSC}) where {Tv}
-    At = A.parent
-    DeviceSparseMatrixCSR(size(A, 1), size(A, 2), At.colptr, rowvals(At), nonzeros(At))
-end
-
-# Conversion functions between CSC and CSR
-function DeviceSparseMatrixCSR(A::SparseMatrixCSC)
-    # TODO: Implement a direct CSC to CSR conversion without going through transposition
-    At = transpose(A)
-    At_sparse = transpose(SparseMatrixCSC(At))
-    return DeviceSparseMatrixCSR(At_sparse)
-end
-
-function SparseMatrixCSC(A::DeviceSparseMatrixCSR)
-    # Convert CSR to CSC by creating transposed CSC and then transposing back
-    At_csc =
-        SparseMatrixCSC(A.n, A.m, collect(A.rowptr), collect(A.colval), collect(A.nzval))
-    return SparseMatrixCSC(transpose(At_csc))
 end
 
 Adapt.adapt_structure(to, A::DeviceSparseMatrixCSR) = DeviceSparseMatrixCSR(
