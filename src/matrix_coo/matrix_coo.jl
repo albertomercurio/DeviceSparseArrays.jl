@@ -50,7 +50,13 @@ struct DeviceSparseMatrixCOO{
         length(rowind) == length(colind) == length(nzval) ||
             throw(ArgumentError("rowind, colind, and nzval must have same length"))
 
-        return new{Tv,Ti,RowIndT,ColIndT,NzValT}(Int(m), Int(n), rowind, colind, nzval)
+        return new{Tv,Ti,RowIndT,ColIndT,NzValT}(
+            Int(m),
+            Int(n),
+            copy(rowind),
+            copy(colind),
+            copy(nzval),
+        )
     end
 end
 
