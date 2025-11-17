@@ -16,7 +16,7 @@ types) enable dispatch on device characteristics.
 """
 struct DeviceSparseMatrixCSR{
     Tv,
-    Ti<:Integer,
+    Ti,
     RowPtrT<:AbstractVector{Ti},
     ColValT<:AbstractVector{Ti},
     NzValT<:AbstractVector{Tv},
@@ -35,7 +35,7 @@ struct DeviceSparseMatrixCSR{
         nzval::NzValT,
     ) where {
         Tv,
-        Ti<:Integer,
+        Ti,
         RowPtrT<:AbstractVector{Ti},
         ColValT<:AbstractVector{Ti},
         NzValT<:AbstractVector{Tv},

@@ -13,12 +13,8 @@ on different devices. The logical length is stored along with index/value buffer
 
 Constructors validate that the index and value vectors have matching length.
 """
-struct DeviceSparseVector{
-    Tv,
-    Ti<:Integer,
-    IndT<:AbstractVector{Ti},
-    ValT<:AbstractVector{Tv},
-} <: AbstractDeviceSparseVector{Tv,Ti}
+struct DeviceSparseVector{Tv,Ti,IndT<:AbstractVector{Ti},ValT<:AbstractVector{Tv}} <:
+       AbstractDeviceSparseVector{Tv,Ti}
     n::Int
     nzind::IndT
     nzval::ValT

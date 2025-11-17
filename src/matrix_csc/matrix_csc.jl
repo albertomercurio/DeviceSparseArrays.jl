@@ -16,7 +16,7 @@ types) enable dispatch on device characteristics.
 """
 struct DeviceSparseMatrixCSC{
     Tv,
-    Ti<:Integer,
+    Ti,
     ColPtrT<:AbstractVector{Ti},
     RowValT<:AbstractVector{Ti},
     NzValT<:AbstractVector{Tv},
@@ -35,7 +35,7 @@ struct DeviceSparseMatrixCSC{
         nzval::NzValT,
     ) where {
         Tv,
-        Ti<:Integer,
+        Ti,
         ColPtrT<:AbstractVector{Ti},
         RowValT<:AbstractVector{Ti},
         NzValT<:AbstractVector{Tv},
@@ -149,7 +149,7 @@ function LinearAlgebra.tr(A::DeviceSparseMatrixCSC)
     kernel = kernel_tr(backend)
     kernel(res, getcolptr(A), getrowval(A), getnzval(A); ndrange = (n,))
 
-    return allowed_getindex(res, 1)
+    return res #allowed_getindex(res, 1)
 end
 
 # Matrix-Vector and Matrix-Matrix multiplication

@@ -16,7 +16,7 @@ types) enable dispatch on device characteristics.
 """
 struct DeviceSparseMatrixCOO{
     Tv,
-    Ti<:Integer,
+    Ti,
     RowIndT<:AbstractVector{Ti},
     ColIndT<:AbstractVector{Ti},
     NzValT<:AbstractVector{Tv},
@@ -35,7 +35,7 @@ struct DeviceSparseMatrixCOO{
         nzval::NzValT,
     ) where {
         Tv,
-        Ti<:Integer,
+        Ti,
         RowIndT<:AbstractVector{Ti},
         ColIndT<:AbstractVector{Ti},
         NzValT<:AbstractVector{Tv},
