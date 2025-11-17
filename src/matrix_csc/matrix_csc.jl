@@ -1,7 +1,6 @@
 # DeviceSparseMatrixCSC implementation
 
 """
-"""
     DeviceSparseMatrixCSC{Tv,Ti,ColPtrT,RowValT,NzValT} <: AbstractDeviceSparseMatrix{Tv,Ti}
 
 Compressed Sparse Column (CSC) matrix with generic storage vectors for column

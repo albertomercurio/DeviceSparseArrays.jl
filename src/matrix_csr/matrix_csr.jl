@@ -1,7 +1,6 @@
 # DeviceSparseMatrixCSR implementation
 
 """
-"""
     DeviceSparseMatrixCSR{Tv,Ti,RowPtrT,ColValT,NzValT} <: AbstractDeviceSparseMatrix{Tv,Ti}
 
 Compressed Sparse Row (CSR) matrix with generic storage vectors for row
