@@ -1,7 +1,8 @@
 # DeviceSparseMatrixCSR implementation
 
 """
-    DeviceSparseMatrixCSR{Tv,Ti,RowPtrT<:AbstractVector{Ti},ColValT<:AbstractVector{Ti},NzValT<:AbstractVector{Tv}} <: AbstractDeviceSparseMatrix{Tv,Ti}
+"""
+    DeviceSparseMatrixCSR{Tv,Ti,RowPtrT,ColValT,NzValT} <: AbstractDeviceSparseMatrix{Tv,Ti}
 
 Compressed Sparse Row (CSR) matrix with generic storage vectors for row
 pointer, column indices, and nonzero values. Buffer types (e.g. `Vector`, GPU array
