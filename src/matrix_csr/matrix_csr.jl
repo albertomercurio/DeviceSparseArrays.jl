@@ -1,7 +1,7 @@
 # DeviceSparseMatrixCSR implementation
 
 """
-    DeviceSparseMatrixCSR{Tv,Ti,RowPtrT<:ColValT,NzValT} <: AbstractDeviceSparseMatrix{Tv,Ti}
+    DeviceSparseMatrixCSR{Tv,Ti,RowPtrT<:AbstractVector{Ti},ColValT<:AbstractVector{Ti},NzValT<:AbstractVector{Tv}} <: AbstractDeviceSparseMatrix{Tv,Ti}
 
 Compressed Sparse Row (CSR) matrix with generic storage vectors for row
 pointer, column indices, and nonzero values. Buffer types (e.g. `Vector`, GPU array
@@ -17,16 +17,17 @@ types) enable dispatch on device characteristics.
 struct DeviceSparseMatrixCSR{
     Tv,
     Ti<:Integer,
-    RowPtrT<:AbstractVector,
-    ColValT<:AbstractVector,
-    NzValT<:AbstractVector,
+    RowPtrT<:AbstractVector{Ti},
+    ColValT<:AbstractVector{Ti},
+    NzValT<:AbstractVector{Tv},
 } <: AbstractDeviceSparseMatrix{Tv,Ti}
     m::Int
     n::Int
     rowptr::RowPtrT
     colval::ColValT
     nzval::NzValT
-    function DeviceSparseMatrixCSR{Tv,Ti,RowPtrT,ColValT,NzValT}(
+
+    function DeviceSparseMatrixCSR(
         m::Integer,
         n::Integer,
         rowptr::RowPtrT,
@@ -35,9 +36,9 @@ struct DeviceSparseMatrixCSR{
     ) where {
         Tv,
         Ti<:Integer,
-        RowPtrT<:AbstractVector,
-        ColValT<:AbstractVector,
-        NzValT<:AbstractVector,
+        RowPtrT<:AbstractVector{Ti},
+        ColValT<:AbstractVector{Ti},
+        NzValT<:AbstractVector{Tv},
     }
         get_backend(rowptr) == get_backend(colval) == get_backend(nzval) ||
             throw(ArgumentError("All storage vectors must be on the same device/backend."))
@@ -47,32 +48,18 @@ struct DeviceSparseMatrixCSR{
         SparseArrays.sparse_check_Ti(m, n, Ti)
         # SparseArrays.sparse_check(m, rowptr, colval, nzval) # TODO: this uses scalar indexing
 
-        _check_type(Ti, rowptr) || throw(ArgumentError("rowptr must be of type $Ti"))
-        _check_type(Ti, colval) || throw(ArgumentError("colval must be of type $Ti"))
-        _check_type(Tv, nzval) || throw(ArgumentError("nzval must be of type $Tv"))
-
         length(rowptr) == m + 1 || throw(ArgumentError("rowptr length must be m+1"))
         length(colval) == length(nzval) ||
             throw(ArgumentError("colval and nzval must have same length"))
 
-        return new(Int(m), Int(n), copy(rowptr), copy(colval), copy(nzval))
+        return new{Tv,Ti,RowPtrT,ColValT,NzValT}(
+            Int(m),
+            Int(n),
+            copy(rowptr),
+            copy(colval),
+            copy(nzval),
+        )
     end
-end
-
-function DeviceSparseMatrixCSR(
-    m::Integer,
-    n::Integer,
-    rowptr::RowPtrT,
-    colval::ColValT,
-    nzval::NzValT,
-) where {
-    RowPtrT<:AbstractVector{Ti},
-    ColValT<:AbstractVector{Ti},
-    NzValT<:AbstractVector{Tv},
-} where {Ti<:Integer,Tv}
-    Ti2 = _get_eltype(rowptr)
-    Tv2 = _get_eltype(nzval)
-    DeviceSparseMatrixCSR{Tv2,Ti2,RowPtrT,ColValT,NzValT}(m, n, rowptr, colval, nzval)
 end
 
 Adapt.adapt_structure(to, A::DeviceSparseMatrixCSR) = DeviceSparseMatrixCSR(
