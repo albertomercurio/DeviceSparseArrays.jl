@@ -1,7 +1,8 @@
 # DeviceSparseMatrixCSC implementation
 
 """
-    DeviceSparseMatrixCSC{Tv,Ti,ColPtrT<:AbstractVector{Ti},RowValT<:AbstractVector{Ti},NzValT<:AbstractVector{Tv}} <: AbstractDeviceSparseMatrix{Tv,Ti}
+"""
+    DeviceSparseMatrixCSC{Tv,Ti,ColPtrT,RowValT,NzValT} <: AbstractDeviceSparseMatrix{Tv,Ti}
 
 Compressed Sparse Column (CSC) matrix with generic storage vectors for column
 pointer, row indices, and nonzero values. Buffer types (e.g. `Vector`, GPU array
