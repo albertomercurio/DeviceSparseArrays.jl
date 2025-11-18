@@ -143,3 +143,102 @@ end
         C[rowval[j], col] += nzval[j]
     end
 end
+
+# Kernel for counting non-zeros per column when adding two CSC matrices
+@kernel inbounds=true function kernel_count_nnz_per_col_csc!(
+    nnz_per_col,
+    @Const(colptr_A),
+    @Const(rowval_A),
+    @Const(colptr_B),
+    @Const(rowval_B),
+)
+    col = @index(Global)
+
+    i_A = colptr_A[col]
+    i_B = colptr_B[col]
+    end_A = colptr_A[col+1]
+    end_B = colptr_B[col+1]
+
+    count = 0
+    while i_A < end_A && i_B < end_B
+        row_A = rowval_A[i_A]
+        row_B = rowval_B[i_B]
+        if row_A < row_B
+            count += 1
+            i_A += 1
+        elseif row_A > row_B
+            count += 1
+            i_B += 1
+        else  # row_A == row_B
+            count += 1
+            i_A += 1
+            i_B += 1
+        end
+    end
+
+    # Add remaining entries from A
+    count += (end_A - i_A)
+    # Add remaining entries from B
+    count += (end_B - i_B)
+
+    nnz_per_col[col] = count
+end
+
+# Kernel for merging two CSC matrices (addition)
+@kernel inbounds=true function kernel_merge_csc!(
+    rowval_C,
+    nzval_C,
+    @Const(colptr_C),
+    @Const(colptr_A),
+    @Const(rowval_A),
+    @Const(nzval_A),
+    @Const(colptr_B),
+    @Const(rowval_B),
+    @Const(nzval_B),
+)
+    col = @index(Global)
+
+    i_A = colptr_A[col]
+    i_B = colptr_B[col]
+    i_C = colptr_C[col]
+    end_A = colptr_A[col+1]
+    end_B = colptr_B[col+1]
+
+    while i_A < end_A && i_B < end_B
+        row_A = rowval_A[i_A]
+        row_B = rowval_B[i_B]
+        if row_A < row_B
+            rowval_C[i_C] = row_A
+            nzval_C[i_C] = nzval_A[i_A]
+            i_A += 1
+            i_C += 1
+        elseif row_A > row_B
+            rowval_C[i_C] = row_B
+            nzval_C[i_C] = nzval_B[i_B]
+            i_B += 1
+            i_C += 1
+        else  # row_A == row_B
+            rowval_C[i_C] = row_A
+            nzval_C[i_C] = nzval_A[i_A] + nzval_B[i_B]
+            i_A += 1
+            i_B += 1
+            i_C += 1
+        end
+    end
+
+    # Copy remaining entries from A
+    while i_A < end_A
+        rowval_C[i_C] = rowval_A[i_A]
+        nzval_C[i_C] = nzval_A[i_A]
+        i_A += 1
+        i_C += 1
+    end
+
+    # Copy remaining entries from B
+    while i_B < end_B
+        rowval_C[i_C] = rowval_B[i_B]
+        nzval_C[i_C] = nzval_B[i_B]
+        i_B += 1
+        i_C += 1
+    end
+end

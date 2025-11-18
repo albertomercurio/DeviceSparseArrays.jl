@@ -181,3 +181,55 @@ end
         nzval_C[idx] = val_A * val_B
     end
 end
+
+# Kernel for marking duplicate entries in sorted COO format
+# Returns a mask where mask[i] = true if entry i should be kept (first occurrence or sum)
+@kernel inbounds=true function kernel_mark_unique_coo!(
+    keep_mask,
+    @Const(rowind),
+    @Const(colind),
+    @Const(nnz_total),
+)
+    i = @index(Global)
+
+    if i == 1
+        # Always keep the first entry
+        keep_mask[i] = true
+    elseif i <= nnz_total
+        # Keep if different from previous entry
+        keep_mask[i] = (rowind[i] != rowind[i-1] || colind[i] != colind[i-1])
+    end
+end
+
+# Kernel for compacting COO by summing duplicate entries
+@kernel inbounds=true function kernel_compact_coo!(
+    rowind_out,
+    colind_out,
+    nzval_out,
+    @Const(rowind_in),
+    @Const(colind_in),
+    @Const(nzval_in),
+    @Const(write_indices),
+    @Const(nnz_in),
+)
+    i = @index(Global)
+
+    if i <= nnz_in
+        out_idx = write_indices[i]
+        
+        # If this is a new entry (or first of duplicates), write it
+        if i == 1 || (rowind_in[i] != rowind_in[i-1] || colind_in[i] != colind_in[i-1])
+            rowind_out[out_idx] = rowind_in[i]
+            colind_out[out_idx] = colind_in[i]
+            
+            # Sum all duplicates
+            val_sum = nzval_in[i]
+            j = i + 1
+            while j <= nnz_in && rowind_in[j] == rowind_in[i] && colind_in[j] == colind_in[i]
+                val_sum += nzval_in[j]
+                j += 1
+            end
+            nzval_out[out_idx] = val_sum
+        end
+    end
+end

@@ -276,6 +276,37 @@ function shared_test_linearalgebra_matrix_csc(
         end
     end
 
+    @testset "Sparse + Sparse Matrix Addition" begin
+        for T in (int_types..., float_types..., complex_types...)
+            m, n = 50, 40
+            A = sprand(T, m, n, 0.1)
+            B = sprand(T, m, n, 0.15)
+
+            dA = adapt(op, DeviceSparseMatrixCSC(A))
+            dB = adapt(op, DeviceSparseMatrixCSC(B))
+
+            # Test sparse + sparse
+            result = dA + dB
+            expected = A + B
+            @test collect(result) ≈ Matrix(expected)
+            @test result isa DeviceSparseMatrixCSC
+
+            # Test with overlapping entries
+            A_overlap = sparse([1, 2, 3], [1, 2, 3], T[1, 2, 3], m, n)
+            B_overlap = sparse([1, 2, 4], [1, 2, 4], T[4, 5, 6], m, n)
+            dA_overlap = adapt(op, DeviceSparseMatrixCSC(A_overlap))
+            dB_overlap = adapt(op, DeviceSparseMatrixCSC(B_overlap))
+            result_overlap = dA_overlap + dB_overlap
+            expected_overlap = A_overlap + B_overlap
+            @test collect(result_overlap) ≈ Matrix(expected_overlap)
+
+            # Test dimension mismatch
+            B_wrong = sprand(T, m + 1, n, 0.1)
+            dB_wrong = adapt(op, DeviceSparseMatrixCSC(B_wrong))
+            @test_throws DimensionMismatch dA + dB_wrong
+        end
+    end
+
     @testset "Kronecker Product" begin
         if array_type != "JLArray"
             for T in (int_types..., float_types..., complex_types...)

@@ -229,6 +229,66 @@ function benchmark_sparse_dense_add!(
 end
 
 """
+    benchmark_sparse_sparse_add!(SUITE, array_constructor, array_type_name; N=10000, T=Float64)
+
+Benchmark sparse + sparse matrix addition for CSC, CSR, and COO formats.
+
+# Arguments
+- `SUITE`: The BenchmarkGroup to add benchmarks to
+- `array_constructor`: Function to construct arrays (e.g., `Array`, `JLArray`)
+- `array_type_name`: String name for the array type (for display)
+
+# Keyword Arguments
+- `N`: Size of the matrix (default: 10000)
+- `T`: Element type (default: Float64)
+"""
+function benchmark_sparse_sparse_add!(
+    SUITE,
+    array_constructor,
+    array_type_name;
+    N = 10000,
+    T = Float64,
+)
+    # Create two sparse matrices with 1% density
+    sm_a_csc_std = sprand(T, N, N, 0.01)
+    sm_b_csc_std = sprand(T, N, N, 0.01)
+
+    # Convert to different formats
+    sm_a_csc = DeviceSparseMatrixCSC(sm_a_csc_std)
+    sm_b_csc = DeviceSparseMatrixCSC(sm_b_csc_std)
+    sm_a_csr = DeviceSparseMatrixCSR(sm_a_csc_std)
+    sm_b_csr = DeviceSparseMatrixCSR(sm_b_csc_std)
+    sm_a_coo = DeviceSparseMatrixCOO(sm_a_csc_std)
+    sm_b_coo = DeviceSparseMatrixCOO(sm_b_csc_std)
+
+    # Adapt to device
+    dsm_a_csc = adapt(array_constructor, sm_a_csc)
+    dsm_b_csc = adapt(array_constructor, sm_b_csc)
+    dsm_a_csr = adapt(array_constructor, sm_a_csr)
+    dsm_b_csr = adapt(array_constructor, sm_b_csr)
+    dsm_a_coo = adapt(array_constructor, sm_a_coo)
+    dsm_b_coo = adapt(array_constructor, sm_b_coo)
+
+    # Level 3: Format (CSC, CSR, COO - will be plotted together)
+    SUITE["Sparse + Sparse Addition"][array_type_name]["CSC"] = @benchmarkable begin
+        $dsm_a_csc + $dsm_b_csc
+        _synchronize_backend($dsm_a_csc)
+    end
+
+    SUITE["Sparse + Sparse Addition"][array_type_name]["CSR"] = @benchmarkable begin
+        $dsm_a_csr + $dsm_b_csr
+        _synchronize_backend($dsm_a_csr)
+    end
+
+    SUITE["Sparse + Sparse Addition"][array_type_name]["COO"] = @benchmarkable begin
+        $dsm_a_coo + $dsm_b_coo
+        _synchronize_backend($dsm_a_coo)
+    end
+
+    return nothing
+end
+
+"""
     benchmark_kron!(SUITE, array_constructor, array_type_name; N=100, T=Float64)
 
 Benchmark Kronecker product (kron) for CSC, CSR, and COO formats.
