@@ -13,16 +13,13 @@ on different devices. The logical length is stored along with index/value buffer
 
 Constructors validate that the index and value vectors have matching length.
 """
-struct DeviceSparseVector{
-    Tv,
-    Ti<:Integer,
-    IndT<:AbstractVector{Ti},
-    ValT<:AbstractVector{Tv},
-} <: AbstractDeviceSparseVector{Tv,Ti}
+struct DeviceSparseVector{Tv,Ti,IndT<:AbstractVector{Ti},ValT<:AbstractVector{Tv}} <:
+       AbstractDeviceSparseVector{Tv,Ti}
     n::Int
     nzind::IndT
     nzval::ValT
-    function DeviceSparseVector{Tv,Ti,IndT,ValT}(
+
+    function DeviceSparseVector(
         n::Integer,
         nzind::IndT,
         nzval::ValT,
@@ -34,17 +31,9 @@ struct DeviceSparseVector{
         n >= 0 || throw(ArgumentError("The number of elements must be non-negative."))
         length(nzind) == length(nzval) ||
             throw(ArgumentError("index and value vectors must be the same length"))
-        return new(Int(n), copy(nzind), copy(nzval))
-    end
-end
 
-# Param inference constructor
-function DeviceSparseVector(
-    n::Integer,
-    nzind::IndT,
-    nzval::ValT,
-) where {IndT<:AbstractVector{Ti},ValT<:AbstractVector{Tv}} where {Ti<:Integer,Tv}
-    DeviceSparseVector{Tv,Ti,IndT,ValT}(n, nzind, nzval)
+        return new{Tv,Ti,IndT,ValT}(Int(n), copy(nzind), copy(nzval))
+    end
 end
 
 # Conversions

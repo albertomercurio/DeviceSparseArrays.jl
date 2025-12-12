@@ -1,7 +1,7 @@
 # DeviceSparseMatrixCOO implementation
 
 """
-    DeviceSparseMatrixCOO{Tv,Ti,RowIndT<:AbstractVector,ColIndT<:AbstractVector,NzValT<:AbstractVector} <: AbstractDeviceSparseMatrix{Tv,Ti}
+    DeviceSparseMatrixCOO{Tv,Ti,RowIndT<:AbstractVector{Ti},ColIndT<:AbstractVector{Ti},NzValT<:AbstractVector{Tv}} <: AbstractDeviceSparseMatrix{Tv,Ti}
 
 Coordinate (COO) sparse matrix with generic storage vectors for row indices,
 column indices, and nonzero values. Buffer types (e.g. `Vector`, GPU array
@@ -16,17 +16,18 @@ types) enable dispatch on device characteristics.
 """
 struct DeviceSparseMatrixCOO{
     Tv,
-    Ti<:Integer,
-    RowIndT<:AbstractVector,
-    ColIndT<:AbstractVector,
-    NzValT<:AbstractVector,
+    Ti,
+    RowIndT<:AbstractVector{Ti},
+    ColIndT<:AbstractVector{Ti},
+    NzValT<:AbstractVector{Tv},
 } <: AbstractDeviceSparseMatrix{Tv,Ti}
     m::Int
     n::Int
     rowind::RowIndT
     colind::ColIndT
     nzval::NzValT
-    function DeviceSparseMatrixCOO{Tv,Ti,RowIndT,ColIndT,NzValT}(
+
+    function DeviceSparseMatrixCOO(
         m::Integer,
         n::Integer,
         rowind::RowIndT,
@@ -34,10 +35,10 @@ struct DeviceSparseMatrixCOO{
         nzval::NzValT,
     ) where {
         Tv,
-        Ti<:Integer,
-        RowIndT<:AbstractVector,
-        ColIndT<:AbstractVector,
-        NzValT<:AbstractVector,
+        Ti,
+        RowIndT<:AbstractVector{Ti},
+        ColIndT<:AbstractVector{Ti},
+        NzValT<:AbstractVector{Tv},
     }
         get_backend(rowind) == get_backend(colind) == get_backend(nzval) ||
             throw(ArgumentError("All storage vectors must be on the same device/backend."))
@@ -46,37 +47,17 @@ struct DeviceSparseMatrixCOO{
         n >= 0 || throw(ArgumentError("n must be non-negative"))
         SparseArrays.sparse_check_Ti(m, n, Ti)
 
-        _check_type(Ti, rowind) || throw(ArgumentError("rowind must be of type $Ti"))
-        _check_type(Ti, colind) || throw(ArgumentError("colind must be of type $Ti"))
-        _check_type(Tv, nzval) || throw(ArgumentError("nzval must be of type $Tv"))
-
         length(rowind) == length(colind) == length(nzval) ||
             throw(ArgumentError("rowind, colind, and nzval must have same length"))
 
-        return new(Int(m), Int(n), rowind, colind, nzval)
+        return new{Tv,Ti,RowIndT,ColIndT,NzValT}(
+            Int(m),
+            Int(n),
+            copy(rowind),
+            copy(colind),
+            copy(nzval),
+        )
     end
-end
-
-function DeviceSparseMatrixCOO(
-    m::Integer,
-    n::Integer,
-    rowind::RowIndT,
-    colind::ColIndT,
-    nzval::NzValT,
-) where {
-    RowIndT<:AbstractVector{Ti},
-    ColIndT<:AbstractVector{Ti},
-    NzValT<:AbstractVector{Tv},
-} where {Ti<:Integer,Tv}
-    Ti2 = _get_eltype(rowind)
-    Tv2 = _get_eltype(nzval)
-    DeviceSparseMatrixCOO{Tv2,Ti2,RowIndT,ColIndT,NzValT}(
-        m,
-        n,
-        copy(rowind),
-        copy(colind),
-        copy(nzval),
-    )
 end
 
 # Conversion from SparseMatrixCSC to COO
