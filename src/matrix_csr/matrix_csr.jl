@@ -313,6 +313,92 @@ function _add_sparse_to_dense!(C::DenseMatrix, A::DeviceSparseMatrixCSR)
 end
 
 """
+    +(A::DeviceSparseMatrixCSR, B::DeviceSparseMatrixCSR)
+
+Add two sparse matrices in CSR format. Both matrices must have the same dimensions
+and be on the same backend (device).
+
+# Examples
+```jldoctest
+julia> using DeviceSparseArrays, SparseArrays
+
+julia> A = DeviceSparseMatrixCSR(sparse([1, 2], [1, 2], [1.0, 2.0], 2, 2));
+
+julia> B = DeviceSparseMatrixCSR(sparse([1, 2], [2, 1], [3.0, 4.0], 2, 2));
+
+julia> C = A + B;
+
+julia> collect(C)
+2×2 Matrix{Float64}:
+ 1.0  3.0
+ 4.0  2.0
+```
+"""
+function Base.:+(A::DeviceSparseMatrixCSR, B::DeviceSparseMatrixCSR)
+    size(A) == size(B) || throw(
+        DimensionMismatch(
+            "dimensions must match: A has dims $(size(A)), B has dims $(size(B))",
+        ),
+    )
+
+    backend_A = get_backend(A)
+    backend_B = get_backend(B)
+    backend_A == backend_B ||
+        throw(ArgumentError("Both matrices must have the same backend"))
+
+    m, n = size(A)
+    Ti = eltype(getrowptr(A))
+    Tv = promote_type(eltype(nonzeros(A)), eltype(nonzeros(B)))
+
+    # Count non-zeros per row
+    nnz_per_row = similar(getrowptr(A), m)
+    fill!(nnz_per_row, zero(Ti))
+
+    backend = backend_A
+    kernel_count! = kernel_count_nnz_per_row_csr!(backend)
+    kernel_count!(
+        nnz_per_row,
+        getrowptr(A),
+        getcolval(A),
+        getrowptr(B),
+        getcolval(B);
+        ndrange = (m,),
+    )
+
+    # Build rowptr for result matrix using cumsum
+    # rowptr_C[i+1] = 1 + sum(nnz_per_row[1:i])
+    cumsum_nnz = _cumsum_AK(nnz_per_row)
+    rowptr_C = similar(getrowptr(A), m + 1)
+    # Set rowptr_C[2:end] to cumsum + 1
+    rowptr_C[2:end] .= cumsum_nnz
+    rowptr_C[2:end] .+= one(Ti)
+    # Set rowptr_C[1] to 1 using broadcasting
+    rowptr_C[1:1] .= one(Ti)
+
+    # Allocate result arrays
+    nnz_total = allowed_getindex(rowptr_C, m + 1) - one(Ti)
+    colval_C = similar(getcolval(A), nnz_total)
+    nzval_C = similar(nonzeros(A), Tv, nnz_total)
+
+    # Merge the two matrices
+    kernel_merge! = kernel_merge_csr!(backend)
+    kernel_merge!(
+        colval_C,
+        nzval_C,
+        rowptr_C,
+        getrowptr(A),
+        getcolval(A),
+        nonzeros(A),
+        getrowptr(B),
+        getcolval(B),
+        nonzeros(B);
+        ndrange = (m,),
+    )
+
+    return DeviceSparseMatrixCSR(m, n, rowptr_C, colval_C, nzval_C)
+end
+
+"""
     kron(A::DeviceSparseMatrixCSR, B::DeviceSparseMatrixCSR)
 
 Compute the Kronecker product of two sparse matrices in CSR format.
